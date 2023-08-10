@@ -1,0 +1,33 @@
+{
+  "name": "gank",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "gank": "cli.js"
+  },
+  "scripts": {
+    "dev": "ts-node src/cli.ts",
+    "build": "rimraf ./lib && tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.9",
+    "ts-node": "^10.9.1",
+    "tsx": "^3.12.7",
+    "typescript": "^5.1.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuxihai123/gank.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xuxihai123/gank/issues"
+  },
+  "homepage": "https://github.com/xuxihai123/gank#readme",
+  "dependencies": {
+    "commander": "7.x"
+  }
+}
