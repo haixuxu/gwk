@@ -54,8 +54,6 @@ export class Tunnel extends EventEmitter {
                 });
             });
 
-            console.log('======init stream=====');
-
             stream.id = streamId;
             self.bindClose(stream);
             self.emit('stream', stream);
@@ -78,7 +76,7 @@ export class Tunnel extends EventEmitter {
         } else if (frame.type === STREAM_DATA) {
             const stream = self.streams[frame.streamId];
             if (stream) {
-                console.log('produce data ok..', stream.id);
+                // console.log('produce data ok..', stream.id);
                 stream.produce(frame.data);
             } else {
                 self.resetStream(frame.streamId);
@@ -86,13 +84,13 @@ export class Tunnel extends EventEmitter {
             }
         } else if (frame.type === STREAM_FIN) {
             const stream = self.streams[frame.streamId];
-            console.log('close stream');
+            // console.log('close stream');
             if (stream) {
                 stream.destroy();
                 delete this.streams[frame.streamId];
             }
         } else if (frame.type === STREAM_RST) {
-            console.log('destory stream');
+            // console.log('destory stream');
             const stream = self.streams[frame.streamId];
             if (stream) {
                 stream.destroy();

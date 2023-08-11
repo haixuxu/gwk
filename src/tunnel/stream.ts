@@ -16,8 +16,6 @@ class GankStream extends Duplex {
     }
 
     _write(chunk:Buffer, encoding:string, callback:any) {
-
-        console.log('chunk:',chunk.toString());
         // The underlying source only deals with strings
         this.writerFn(chunk, this);
         callback();
@@ -25,6 +23,7 @@ class GankStream extends Duplex {
     _read(size?:number) {
         size = size || 1024 * 4;
         const rawdata = this.cache.subarray(0, size);
+        // console.log( 'read:',rawdata.toString())
         this.push(rawdata);
         this.cache = this.cache.subarray(size);
     }

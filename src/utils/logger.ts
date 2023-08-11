@@ -19,12 +19,12 @@ function dateFormat(formatStr:string, dt?:Date){
 
 
 export interface Logger {
-    fatal: (msg:string)=>void;
-    error: (msg:string)=>void;
-    warn: (msg:string)=>void;
-    info: (msg:string)=>void;
-    log: (msg:string)=>void;
-    debug: (msg:string)=>void;
+    fatal: (...msg: any[]) => void;
+    error: (...msg: any[]) => void;
+    warn: (...msg: any[]) => void;
+    info: (...msg: any[]) => void;
+    log: (...msg: any[]) => void;
+    debug: (...msg: any[]) => void;
 }
 
 const levelVal: any= {
@@ -42,10 +42,10 @@ function getCustomLogger(label:string, level:string):Logger {
     function getter(_target:unknown, key:string) {
         if (levelVal[key].piv <= setPiv) {
             const colour = levelVal[key].colour;
-            return function (msg:string) {
+            return function (...args:any[]) {
                 const date = dateFormat('yyyy/MM/dd HH:mm:ss');
                 const prefix = `${date} [${key[0].toUpperCase()}] ${label} `;
-                console.log(colour, prefix, msg);
+                console.log(colour, prefix, ...args);
             };
         } else {
             return noop;

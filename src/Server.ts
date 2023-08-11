@@ -7,7 +7,7 @@ import { bindStreamSocket, tcpsocketSend } from './utils/socket';
 import { getRamdomUUID } from './utils/uuid';
 import { Tunnel } from './tunnel';
 import { buildHeader } from './utils/header';
-
+import getCustomLogger, { Logger } from './utils/logger';
 class Server {
     private listenPort: number;
     private connections: any;
@@ -17,6 +17,7 @@ class Server {
     tlsOpts: { key: string | undefined; cert: string | undefined };
     webTunnels: Record<string, Tunnel>;
     serverHost: string;
+    logger: Logger;
     constructor(opts: GankServerOpts) {
         this.listenPort = opts.tunnelAddr || 4443;
         this.listenHttpPort = opts.httpAddr || 80;
@@ -29,6 +30,7 @@ class Server {
             cert: opts.tlsCrt,
         };
         this.webTunnels = {};
+        this.logger = getCustomLogger('svc', 'debug');
     }
 
     setupTunnel(conn: any, frame: TunnelReqFrame) {
@@ -36,8 +38,8 @@ class Server {
         if (frame.protocol === 0x1) {
             const opts = { localPort: frame.port, protocol: frame.protocol };
             const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
-            const server = net.createServer(function(socket2) {
-                console.log('handle socket on ', frame.port);
+            const server = net.createServer( (socket2)=> {
+                this.logger.info('handle socket on ', frame.port+'');
                 tunnelObj
                     .createStream()
                     .then((stream: any) => {
@@ -49,12 +51,12 @@ class Server {
                         stream.on('close', () => socket2.destroy());
                     })
                     .catch((err: Error) => {
-                        console.log('err:', err);
+                        this.logger.info('err:', err.message);
                         socket2.write('service invalid!');
                     });
             });
             server.listen(frame.port, () => {
-                console.log('server listen on 127.0.0.1:' + frame.port);
+                this.logger.info('server listen on 127.0.0.1:' + frame.port);
                 // create tunnel for tcp ok
                 const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x1);
                 tcpsocketSend(conn.socket, tunresframe.encode());
@@ -63,7 +65,7 @@ class Server {
         } else {
             const opts = { localPort: frame.port, protocol: frame.protocol };
             if (!frame.subdomain) {
-                console.log('error: subdomain missing');
+                this.logger.info('error: subdomain missing');
                 return;
             }
             const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
@@ -78,29 +80,29 @@ class Server {
     }
 
     handleError(conn: any, err: Error) {
-        console.log('err:', err);
+        this.logger.info('err:', err.message);
     }
 
     handleData(conn: any, data: Buffer) {
         try {
             const frame = decode(data);
-            console.log('frame:', frame);
+            // this.logger.info('frame:', frame);
             if (frame.type === AUTH_REQ) {
                 const fm = new AuthFrame(AUTH_RES, frame.token, 1);
                 tcpsocketSend(conn.socket, fm.encode());
                 this.connections[conn.cid] = conn;
             } else if (frame.type === PONG_FRAME) {
-                // console.log('rtt:', Date.now() - parseInt(frame.stime));
+                // this.logger.info('rtt:', Date.now() - parseInt(frame.stime));
             } else if (frame.type === TUNNEL_REQ) {
                 this.setupTunnel(conn, frame);
             } else if (frame.type >= 0xf0) {
                 const tunnel = this.tunnels[frame.tunnelId];
-                if(tunnel){
+                if (tunnel) {
                     tunnel.dispatchFrame(frame);
                 }
             }
         } catch (error) {
-            console.log('error:', error);
+            this.logger.info('error:', error);
         }
     }
 
@@ -140,7 +142,7 @@ class Server {
     handleHttpRequest(req: any, res: any) {
         let host = req.headers['host'];
         host = host.replace(/:\d+$/, '');
-        console.log('webTunnels:', Object.keys(this.webTunnels));
+        this.logger.info('webTunnels:', Object.keys(this.webTunnels));
         const tunnel = this.webTunnels[host];
         if (!tunnel) {
             res.end('service host missing!');
@@ -149,19 +151,25 @@ class Server {
         tunnel
             .createStream()
             .then((stream: any) => {
-                console.log('pipe to stream===>');
-                stream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);
-                stream.write(buildHeader(req.rawHeaders));
-                stream.write('\r\n');
-                req.on('data',function(data:Buffer){
-                    stream.write(data);
+                // 获取已连接的套接字
+                const socket = req.socket;
+                const headerStr = buildHeader(req.rawHeaders);
+                // 将请求头和正文写入套接字
+                stream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${headerStr}\r\n`);
+                res.detachSocket(socket);
+                socket.pipe(stream);
+                stream.pipe(socket);
+
+                req.on('close', () => {
+                    this.logger.info('req close=====');
                 });
-                stream.pipe(res);
-                req.on('close', () => stream.destroy());
-                stream.on('close', () => res.destroy());
+                stream.on('close', () => {
+                    this.logger.info('stream close====');
+                    socket.destroy();
+                });
             })
             .catch((err: Error) => {
-                console.log('err:', err);
+                this.logger.info('err:', err);
             });
     }
 
@@ -169,17 +177,17 @@ class Server {
         const server = net.createServer(this.handleConection.bind(this));
         // this.keepOnline();
         server.listen(this.listenPort, () => {
-            console.log('server listen on 127.0.0.1:' + this.listenPort);
+            this.logger.info('server listen on 127.0.0.1:' + this.listenPort);
         });
 
         const httpserver = http.createServer(this.handleHttpRequest.bind(this));
         httpserver.listen(this.listenHttpPort, () => {
-            console.log('http server listen on 127.0.0.1:' + this.listenHttpPort);
+            this.logger.info('http server listen on 127.0.0.1:' + this.listenHttpPort);
         });
-        console.log(this.tlsOpts);
+        this.logger.info(this.tlsOpts);
         const httpsserve = https.createServer(this.tlsOpts, this.handleHttpRequest.bind(this));
         httpsserve.listen(this.listenHttpsPort, () => {
-            console.log('https server listen on 127.0.0.1:' + this.listenHttpsPort);
+            this.logger.info('https server listen on 127.0.0.1:' + this.listenHttpsPort);
         });
     }
 }
