@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.4.9",
+    "@types/uuid": "^9.0.2",
     "ts-node": "^10.9.1",
     "tsx": "^3.12.7",
     "typescript": "^5.1.5"
@@ -28,6 +29,7 @@
   },
   "homepage": "https://github.com/xuxihai123/gank#readme",
   "dependencies": {
-    "commander": "7.x"
+    "commander": "7.x",
+    "uuid": "^9.0.0"
   }
 }

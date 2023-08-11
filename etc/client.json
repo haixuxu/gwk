@@ -1,4 +1,11 @@
 {
     "tunnelHost":"127.0.0.1",
-    "tunnelAddr":4443
+    "tunnelAddr":4443,
+    "tunnels":[
+        {
+            "protocol":"tcp",
+            "localPort":5000,
+            "remotePort":7200
+        }
+    ]
 }
