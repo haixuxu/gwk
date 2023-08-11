@@ -16,6 +16,8 @@ class GankStream extends Duplex {
     }
 
     _write(chunk:Buffer, encoding:string, callback:any) {
+
+        console.log('chunk:',chunk.toString());
         // The underlying source only deals with strings
         this.writerFn(chunk, this);
         callback();

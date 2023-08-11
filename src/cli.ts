@@ -1,5 +1,5 @@
 import commander from 'commander';
-import fs from 'fs';
+import fs, { readFileSync } from 'fs';
 import path from 'path';
 import Client from './Client';
 import Server from './Server';
@@ -27,7 +27,12 @@ commander
         const configPath = cmd.config || 'server.json';
         console.log(`Starting gank server with config: ${configPath}`);
         const serverOpts = readJsonFile(configPath);
+        if (serverOpts.tlsCrt) {
+            serverOpts.tlsCrt = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsCrt), 'utf8');
+            serverOpts.tlsKey = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsKey), 'utf8');
+        }
         const server = new Server(serverOpts);
+      
         server.bootstrap();
     });
 

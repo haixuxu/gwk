@@ -54,6 +54,8 @@ export class Tunnel extends EventEmitter {
                 });
             });
 
+            console.log('======init stream=====');
+
             stream.id = streamId;
             self.bindClose(stream);
             self.emit('stream', stream);

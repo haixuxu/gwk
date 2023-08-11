@@ -71,7 +71,7 @@ export function decode(data: Buffer): any {
         if (prototype === 0x1) {
             value = data[34] * 256 + data[35];
         } else {
-            value = data.slice(34, data[34]);
+            value = data.slice(35, 35+data[34]).toString();
         }
         return new TunnelReqFrame(type, tunnelId, data[33], value);
     } else if (type === TUNNEL_RES) {

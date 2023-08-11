@@ -1,18 +1,34 @@
 import net from 'net';
+import http from 'http';
+import https from 'https';
 import { GankServerOpts } from './types/index';
 import { AUTH_REQ, AUTH_RES, AuthFrame, PING_FRAME, PONG_FRAME, PingFrame, TUNNEL_REQ, TUNNEL_RES, TunnelReqFrame, TunnelResFrame, decode } from './protocol';
 import { bindStreamSocket, tcpsocketSend } from './utils/socket';
 import { getRamdomUUID } from './utils/uuid';
 import { Tunnel } from './tunnel';
+import { buildHeader } from './utils/header';
 
 class Server {
     private listenPort: number;
     private connections: any;
-    private tunnels: any;
+    private tunnels: Record<string, Tunnel>;
+    listenHttpPort: number;
+    listenHttpsPort: number;
+    tlsOpts: { key: string | undefined; cert: string | undefined };
+    webTunnels: Record<string, Tunnel>;
+    serverHost: string;
     constructor(opts: GankServerOpts) {
         this.listenPort = opts.tunnelAddr || 4443;
+        this.listenHttpPort = opts.httpAddr || 80;
+        this.listenHttpsPort = opts.httpsAddr || 443;
+        this.serverHost = opts.domain || 'gank007.com';
         this.connections = {};
         this.tunnels = {};
+        this.tlsOpts = {
+            key: opts.tlsKey,
+            cert: opts.tlsCrt,
+        };
+        this.webTunnels = {};
     }
 
     setupTunnel(conn: any, frame: TunnelReqFrame) {
@@ -44,8 +60,20 @@ class Server {
                 tcpsocketSend(conn.socket, tunresframe.encode());
                 self.tunnels[frame.tunnelId] = tunnelObj;
             });
-        } else if (frame.protocol === 0x2) {
-        } else if (frame.protocol === 0x3) {
+        } else {
+            const opts = { localPort: frame.port, protocol: frame.protocol };
+            if (!frame.subdomain) {
+                console.log('error: subdomain missing');
+                return;
+            }
+            const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
+            // create tunnel for tcp ok
+            const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x1);
+            tcpsocketSend(conn.socket, tunresframe.encode());
+
+            const subdomainfull = frame.subdomain + '.' + this.serverHost;
+            self.tunnels[frame.tunnelId] = tunnelObj;
+            self.webTunnels[subdomainfull] = tunnelObj;
         }
     }
 
@@ -67,7 +95,9 @@ class Server {
                 this.setupTunnel(conn, frame);
             } else if (frame.type >= 0xf0) {
                 const tunnel = this.tunnels[frame.tunnelId];
-                tunnel.dispatchFrame(frame);
+                if(tunnel){
+                    tunnel.dispatchFrame(frame);
+                }
             }
         } catch (error) {
             console.log('error:', error);
@@ -90,7 +120,7 @@ class Server {
 
     keepOnline() {
         setTimeout(() => {
-            const delList:string[] = [];
+            const delList: string[] = [];
             Object.keys(this.connections).forEach((key) => {
                 const conn = this.connections[key];
                 const pingFrame = new PingFrame(PING_FRAME, Date.now() + '');
@@ -100,18 +130,56 @@ class Server {
                     delList.push(key);
                 }
             });
-            delList.forEach(key=>{
-                delete this.connections[key]
+            delList.forEach((key) => {
+                delete this.connections[key];
             });
             this.keepOnline();
         }, 3000);
     }
 
+    handleHttpRequest(req: any, res: any) {
+        let host = req.headers['host'];
+        host = host.replace(/:\d+$/, '');
+        console.log('webTunnels:', Object.keys(this.webTunnels));
+        const tunnel = this.webTunnels[host];
+        if (!tunnel) {
+            res.end('service host missing!');
+            return;
+        }
+        tunnel
+            .createStream()
+            .then((stream: any) => {
+                console.log('pipe to stream===>');
+                stream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);
+                stream.write(buildHeader(req.rawHeaders));
+                stream.write('\r\n');
+                req.on('data',function(data:Buffer){
+                    stream.write(data);
+                });
+                stream.pipe(res);
+                req.on('close', () => stream.destroy());
+                stream.on('close', () => res.destroy());
+            })
+            .catch((err: Error) => {
+                console.log('err:', err);
+            });
+    }
+
     bootstrap() {
         const server = net.createServer(this.handleConection.bind(this));
-        this.keepOnline();
+        // this.keepOnline();
         server.listen(this.listenPort, () => {
             console.log('server listen on 127.0.0.1:' + this.listenPort);
+        });
+
+        const httpserver = http.createServer(this.handleHttpRequest.bind(this));
+        httpserver.listen(this.listenHttpPort, () => {
+            console.log('http server listen on 127.0.0.1:' + this.listenHttpPort);
+        });
+        console.log(this.tlsOpts);
+        const httpsserve = https.createServer(this.tlsOpts, this.handleHttpRequest.bind(this));
+        httpsserve.listen(this.listenHttpsPort, () => {
+            console.log('https server listen on 127.0.0.1:' + this.listenHttpsPort);
         });
     }
 }

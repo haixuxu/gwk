@@ -8,9 +8,19 @@
             "remotePort":7200
         },
         {
+            "protocol":"tcp",
+            "localPort":5000,
+            "remotePort":7201
+        },
+        {
             "protocol":"http",
-            "localPort":4000,
-            "subdomain":"testxxx"
+            "localPort":8080,
+            "subdomain":"app01"
+        },
+        {
+            "protocol":"https",
+            "localPort":9000,
+            "subdomain":"mob"
         }
     ]
 }
