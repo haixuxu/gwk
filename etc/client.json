@@ -6,6 +6,11 @@
             "protocol":"tcp",
             "localPort":5000,
             "remotePort":7200
+        },
+        {
+            "protocol":"http",
+            "localPort":4000,
+            "subdomain":"testxxx"
         }
     ]
 }

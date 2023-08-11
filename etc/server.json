@@ -1,3 +1,5 @@
 {
-    "tunnelAddr":4443
+    "tunnelAddr": 4443,
+    "httpAddr": 80,
+    "httpsAddr": 443
 }
