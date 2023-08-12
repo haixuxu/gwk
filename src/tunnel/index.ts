@@ -14,6 +14,7 @@ export class Tunnel extends EventEmitter {
     defers: any;
     streams: Record<string, GankStream>;
     opts: TunnelOpts;
+    server: any;
     constructor(tid: string, socket: net.Socket, opts: TunnelOpts) {
         super();
         this.id = tid;
@@ -21,6 +22,7 @@ export class Tunnel extends EventEmitter {
         this.opts = opts;
         this.defers = {};
         this.streams = {};
+        this.server = null;
     }
 
     resetStream(streamId: string) {
@@ -29,13 +31,13 @@ export class Tunnel extends EventEmitter {
     }
     bindClose(stream: GankStream) {
         const self = this;
-        stream.on('close', function() {
+        stream.on('close', function () {
             const finFrame = new StreamFrame(STREAM_FIN, self.id, stream.id);
             try {
                 tcpsocketSend(self.socket, finFrame.encode());
             } catch (error) {
                 // ignor
-                console.log('error:',error);
+                console.log('error:', error);
             }
         });
     }
@@ -45,7 +47,7 @@ export class Tunnel extends EventEmitter {
         if (frame.type === STREAM_INIT) {
             // client init stream
             const streamId = frame.streamId;
-            const stream = new GankStream(function(data: Buffer) {
+            const stream = new GankStream(function (data: Buffer) {
                 const dataFrame = new StreamFrame(STREAM_DATA, self.id, streamId, data);
                 const listFrames = frameSegment(dataFrame);
                 // console.log('write to socket for streamId:', streamId);
@@ -61,7 +63,7 @@ export class Tunnel extends EventEmitter {
             // server check est stream
             const defer = this.defers[frame.streamId];
             const streamId = frame.streamId;
-            const stream = new GankStream(function(data: Buffer) {
+            const stream = new GankStream(function (data: Buffer) {
                 const dataFrame = new StreamFrame(STREAM_DATA, self.id, streamId, data);
                 const listFrames = frameSegment(dataFrame);
                 listFrames.forEach((temp) => {
@@ -100,7 +102,7 @@ export class Tunnel extends EventEmitter {
     }
 
     createStream(): Promise<any> {
-        const defer:any = createDeferred();
+        const defer: any = createDeferred();
         const streamId = getRamdomUUID();
         this.defers[streamId] = defer;
         try {

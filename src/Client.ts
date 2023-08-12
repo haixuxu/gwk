@@ -33,7 +33,7 @@ class Client {
                 } else if (frame.type === TUNNEL_RES) {
                     const tunnel = self.tunnels[frame.tunnelId];
                     tunnel.on('stream', (stream: any) => {
-                        this.logger.info('new stream==== for tunnel:', tunnel.id, tunnel.type, tunnel.localPort);
+                        this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
                         const localPort = tunnel.opts.localPort;
                         const localsocket = new net.Socket();
                         this.logger.info('connect 127.0.0.1:' + localPort);

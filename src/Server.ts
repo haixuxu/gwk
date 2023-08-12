@@ -36,10 +36,10 @@ class Server {
     setupTunnel(conn: any, frame: TunnelReqFrame) {
         const self = this;
         if (frame.protocol === 0x1) {
-            const opts = { localPort: frame.port, protocol: frame.protocol };
+            const opts = { localPort: frame.port, protocol: frame.protocol,remotePort:frame.port };
             const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
-            const server = net.createServer( (socket2)=> {
-                this.logger.info('handle socket on ', frame.port+'');
+            const server = net.createServer((socket2) => {
+                this.logger.info('handle socket on ', frame.port + '');
                 tunnelObj
                     .createStream()
                     .then((stream: any) => {
@@ -60,22 +60,27 @@ class Server {
                 // create tunnel for tcp ok
                 const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x1);
                 tcpsocketSend(conn.socket, tunresframe.encode());
+                tunnelObj.server = server;
                 self.tunnels[frame.tunnelId] = tunnelObj;
+                conn.tunnels.push(tunnelObj);
             });
         } else {
-            const opts = { localPort: frame.port, protocol: frame.protocol };
+            const opts:any = { localPort: frame.port, protocol: frame.protocol };
             if (!frame.subdomain) {
                 this.logger.info('error: subdomain missing');
                 return;
             }
+            const subdomainfull = frame.subdomain + '.' + this.serverHost;
+            opts.fulldomain = subdomainfull;
             const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
             // create tunnel for tcp ok
             const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x1);
             tcpsocketSend(conn.socket, tunresframe.encode());
 
-            const subdomainfull = frame.subdomain + '.' + this.serverHost;
+        
             self.tunnels[frame.tunnelId] = tunnelObj;
             self.webTunnels[subdomainfull] = tunnelObj;
+            conn.tunnels.push(tunnelObj);
         }
     }
 
@@ -107,7 +112,23 @@ class Server {
     }
 
     handleClose(conn: any) {
+        this.releaseConn(conn);
         delete this.connections[conn.connectionId];
+    }
+
+    releaseConn(conn:any){
+        const tunnels = conn.tunnels||[];
+        tunnels.forEach((temp:Tunnel)=>{
+            if(temp.server){
+                this.logger.info(`stop tunnel listen on :${temp.opts.remotePort}`);
+                temp.server.close();
+            }
+            delete this.tunnels[temp.id]; // remove this.tunnels element
+            const fulldomain = temp.opts.fulldomain;
+            if(fulldomain){
+                delete this.webTunnels[fulldomain];
+            }
+        });
     }
 
     handleConection(socket: net.Socket) {
@@ -116,7 +137,7 @@ class Server {
         // response tunnel OK
         const self = this;
         const cid = getRamdomUUID();
-        const conn: any = { cid, socket };
+        const conn: any = { cid, socket, tunnels: [] };
         bindStreamSocket(socket, self.handleData.bind(self, conn), self.handleError.bind(self, conn), self.handleClose.bind(self, conn));
     }
 

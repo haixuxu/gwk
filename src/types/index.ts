@@ -1,8 +1,9 @@
 export interface TunnelOpts {
-    protocol: string; // tcp/http/https
-    subdomain: string; // http only
+    protocol: string; // tcp/web
     localPort: number;
-    remotePort: number;
+    subdomain?: string; // http only
+    remotePort?: number;
+    fulldomain?:string;
 }
 
 export interface GankClientOpts {
