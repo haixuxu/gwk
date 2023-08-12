@@ -41,6 +41,18 @@ export class Tunnel extends EventEmitter {
             }
         });
     }
+
+    sendFrame(frame: StreamFrame) {
+        try {
+            const listFrames = frameSegment(frame);
+            // console.log('write to socket for streamId:', streamId);
+            listFrames.forEach((temp) => {
+                tcpsocketSend(this.socket, temp.encode());
+            });
+        } catch (error) {
+            Object.values(this.streams).forEach((stream) => stream.destroy());
+        }
+    }
     dispatchFrame(frame: StreamFrame) {
         // console.log('dispatchFrame:', frame);
         const self = this;
@@ -49,11 +61,7 @@ export class Tunnel extends EventEmitter {
             const streamId = frame.streamId;
             const stream = new GankStream(function (data: Buffer) {
                 const dataFrame = new StreamFrame(STREAM_DATA, self.id, streamId, data);
-                const listFrames = frameSegment(dataFrame);
-                // console.log('write to socket for streamId:', streamId);
-                listFrames.forEach((temp) => {
-                    tcpsocketSend(self.socket, temp.encode());
-                });
+                self.sendFrame(dataFrame);
             });
 
             stream.id = streamId;
@@ -65,10 +73,7 @@ export class Tunnel extends EventEmitter {
             const streamId = frame.streamId;
             const stream = new GankStream(function (data: Buffer) {
                 const dataFrame = new StreamFrame(STREAM_DATA, self.id, streamId, data);
-                const listFrames = frameSegment(dataFrame);
-                listFrames.forEach((temp) => {
-                    tcpsocketSend(self.socket, temp.encode());
-                });
+                self.sendFrame(dataFrame);
             });
             stream.id = streamId;
             this.streams[streamId] = stream;
