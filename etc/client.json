@@ -13,12 +13,12 @@
             "remotePort":7201
         },
         {
-            "protocol":"http",
+            "protocol":"web",
             "localPort":8080,
             "subdomain":"app01"
         },
         {
-            "protocol":"https",
+            "protocol":"web",
             "localPort":9000,
             "subdomain":"mob"
         }

@@ -30,7 +30,7 @@ class Server {
             cert: opts.tlsCrt,
         };
         this.webTunnels = {};
-        this.logger = getCustomLogger('svc', 'debug');
+        this.logger = getCustomLogger('s>', 'debug');
     }
 
     setupTunnel(conn: any, frame: TunnelReqFrame) {
@@ -56,7 +56,7 @@ class Server {
                     });
             });
             server.listen(frame.port, () => {
-                this.logger.info('server listen on 127.0.0.1:' + frame.port);
+                this.logger.info('tunnel listen on :' + frame.port);
                 // create tunnel for tcp ok
                 const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x1);
                 tcpsocketSend(conn.socket, tunresframe.encode());

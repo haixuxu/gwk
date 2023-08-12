@@ -43,7 +43,7 @@ export * from './frame';
  * |<--type[1]-->|----tunnel id ---|----stream id----|
  * |-----s1 -----|-------32--------|------- 32-------|
  *
- *  * @param {*} STREAM_FIN frame
+ * @param {*} STREAM_FIN frame
  * |<--type[1]-->|----tunnel id ---|----stream id----|
  * |-----s1 -----|-------32--------|------- 32-------|
  * @returns

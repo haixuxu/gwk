@@ -17,7 +17,7 @@ class Client {
         this.serverPort = opts.tunnelAddr || 4443;
         this.tunnelConfList = opts.tunnels || [];
         this.tunnels = {};
-        this.logger = getCustomLogger('cli', 'debug');
+        this.logger = getCustomLogger('c>', 'debug');
     }
 
     handleData(conn: any, data: Buffer) {

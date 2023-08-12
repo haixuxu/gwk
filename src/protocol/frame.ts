@@ -69,7 +69,7 @@ export class TunnelReqFrame {
     tunnelId: string;
 
     static getProtocolNo(proto: string) {
-        return proto === 'tcp' ? 0x1 : proto === 'http' ? 0x2 : 0x3;
+        return proto === 'tcp' ? 0x1 : 0x2; // tcp 0x1, web 0x2
     }
     constructor(type: number,tunnelId:string, protype: number, value: any) {
         this.type = type;
@@ -77,11 +77,8 @@ export class TunnelReqFrame {
         if (protype === 0x1) {
             this.protocol = 0x1;
             this.port = value;
-        } else if (protype === 0x2) {
-            this.protocol = 0x2;
-            this.subdomain = value;
         } else {
-            this.protocol = 0x3;
+            this.protocol = 0x2;
             this.subdomain = value;
         }
     }

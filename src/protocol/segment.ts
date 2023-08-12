@@ -2,6 +2,7 @@ import { StreamFrame } from './frame';
 
 const DATA_MAX_SIZE = 1024 * 4;
 
+// 大帧拆分
 function frameSegment(frame: StreamFrame): Array<StreamFrame> {
     let offset = 0;
     let offset2 = 0;
@@ -9,7 +10,7 @@ function frameSegment(frame: StreamFrame): Array<StreamFrame> {
         return [frame];
     }
     const len = frame.data.length;
-    // 大帧拆分，最大为65535-39(2+1+36)
+  
     const list: Array<StreamFrame> = [];
     while (true) {
         offset2 = offset + DATA_MAX_SIZE;
