@@ -20,10 +20,8 @@ cert.validity.notAfter = new Date();
 cert.validity.notAfter.setFullYear(cert.validity.notAfter.getFullYear() + 1);
 
 var attrs = [
-    {
-        name: 'commonName',
-        value: 'gank006.com',
-    },
+    { name: 'commonName', value: '*.gank007.com' },
+    { name: 'commonName', value: 'gank007.com' },
     {
         name: 'countryName',
         value: 'CN',
@@ -52,11 +50,11 @@ cert.setSubject(attrs);
 const altNames = [
     {
         type: 2, // DNS
-        value: '*.gank006.com',
+        value: '*.gank007.com',
     },
     {
         type: 2, // DNS
-        value: 'gank006.com',
+        value: 'gank007.com',
     },
 ];
 

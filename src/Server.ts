@@ -12,20 +12,21 @@ class Server {
     private listenPort: number;
     private connections: any;
     private tunnels: Record<string, Tunnel>;
-    listenHttpPort: number;
-    listenHttpsPort: number;
-    tlsOpts: { key: string | undefined; cert: string | undefined };
+    listenHttpPort: number | undefined;
+    listenHttpsPort: number | undefined;
+    tlsOpts: { ca: string | undefined; key: string | undefined; cert: string | undefined };
     webTunnels: Record<string, Tunnel>;
     serverHost: string;
     logger: Logger;
     constructor(opts: GankServerOpts) {
         this.listenPort = opts.tunnelAddr || 4443;
-        this.listenHttpPort = opts.httpAddr || 80;
-        this.listenHttpsPort = opts.httpsAddr || 443;
+        this.listenHttpPort = opts.httpAddr;
+        this.listenHttpsPort = opts.httpsAddr;
         this.serverHost = opts.domain || 'gank007.com';
         this.connections = {};
         this.tunnels = {};
         this.tlsOpts = {
+            ca: opts.tlsCA,
             key: opts.tlsKey,
             cert: opts.tlsCrt,
         };
@@ -36,7 +37,7 @@ class Server {
     setupTunnel(conn: any, frame: TunnelReqFrame) {
         const self = this;
         if (frame.protocol === 0x1) {
-            const opts = { localPort: frame.port, protocol: frame.protocol,remotePort:frame.port };
+            const opts = { localPort: frame.port, protocol: frame.protocol, remotePort: frame.port };
             const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
             const server = net.createServer((socket2) => {
                 this.logger.info('handle socket on ', frame.port + '');
@@ -65,7 +66,7 @@ class Server {
                 conn.tunnels.push(tunnelObj);
             });
         } else {
-            const opts:any = { localPort: frame.port, protocol: frame.protocol };
+            const opts: any = { localPort: frame.port, protocol: frame.protocol };
             if (!frame.subdomain) {
                 this.logger.info('error: subdomain missing');
                 return;
@@ -77,7 +78,6 @@ class Server {
             const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x1);
             tcpsocketSend(conn.socket, tunresframe.encode());
 
-        
             self.tunnels[frame.tunnelId] = tunnelObj;
             self.webTunnels[subdomainfull] = tunnelObj;
             conn.tunnels.push(tunnelObj);
@@ -116,16 +116,16 @@ class Server {
         delete this.connections[conn.connectionId];
     }
 
-    releaseConn(conn:any){
-        const tunnels = conn.tunnels||[];
-        tunnels.forEach((temp:Tunnel)=>{
-            if(temp.server){
+    releaseConn(conn: any) {
+        const tunnels = conn.tunnels || [];
+        tunnels.forEach((temp: Tunnel) => {
+            if (temp.server) {
                 this.logger.info(`stop tunnel listen on :${temp.opts.remotePort}`);
                 temp.server.close();
             }
             delete this.tunnels[temp.id]; // remove this.tunnels element
             const fulldomain = temp.opts.fulldomain;
-            if(fulldomain){
+            if (fulldomain) {
                 delete this.webTunnels[fulldomain];
             }
         });
@@ -172,6 +172,7 @@ class Server {
         tunnel
             .createStream()
             .then((stream: any) => {
+                this.logger.info('create stream for host:', host);
                 // 获取已连接的套接字
                 const socket = req.socket;
                 const headerStr = buildHeader(req.rawHeaders);
@@ -181,11 +182,11 @@ class Server {
                 socket.pipe(stream);
                 stream.pipe(socket);
 
-                req.on('close', () => {
-                    this.logger.info('req close=====');
-                });
+                // req.on('close', () => {
+                //     this.logger.info('req close=====', host);
+                // });
                 stream.on('close', () => {
-                    this.logger.info('stream close====');
+                    this.logger.info('stream close====', host);
                     socket.destroy();
                 });
             })
@@ -201,15 +202,19 @@ class Server {
             this.logger.info('server listen on 127.0.0.1:' + this.listenPort);
         });
 
-        const httpserver = http.createServer(this.handleHttpRequest.bind(this));
-        httpserver.listen(this.listenHttpPort, () => {
-            this.logger.info('http server listen on 127.0.0.1:' + this.listenHttpPort);
-        });
-        this.logger.info(this.tlsOpts);
-        const httpsserve = https.createServer(this.tlsOpts, this.handleHttpRequest.bind(this));
-        httpsserve.listen(this.listenHttpsPort, () => {
-            this.logger.info('https server listen on 127.0.0.1:' + this.listenHttpsPort);
-        });
+        if (this.listenHttpPort) {
+            const httpserver = http.createServer(this.handleHttpRequest.bind(this));
+            httpserver.listen(this.listenHttpPort, () => {
+                this.logger.info('http server listen on 127.0.0.1:' + this.listenHttpPort);
+            });
+        }
+        if (this.listenHttpsPort) {
+            // this.logger.info(this.tlsOpts);
+            const httpsserve = https.createServer(this.tlsOpts, this.handleHttpRequest.bind(this));
+            httpsserve.listen(this.listenHttpsPort, () => {
+                this.logger.info('https server listen on 127.0.0.1:' + this.listenHttpsPort);
+            });
+        }
     }
 }
 

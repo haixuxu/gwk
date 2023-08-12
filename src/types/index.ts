@@ -21,6 +21,7 @@ export interface GankServerOpts {
     httpsAddr?: number; // default 443
     logLevel?: string; // default info
     logFile?: string; // log file
+    tlsCA?: string;
     tlsCrt?: string;
     tlsKey?: string;
     tunnelAddr?: number;

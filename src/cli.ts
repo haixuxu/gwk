@@ -31,6 +31,10 @@ commander
             serverOpts.tlsCrt = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsCrt), 'utf8');
             serverOpts.tlsKey = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsKey), 'utf8');
         }
+        if(serverOpts.tlsCA){
+            console.log('read ca...')
+            serverOpts.tlsCA = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsCA), 'utf8');
+        }
         const server = new Server(serverOpts);
       
         server.bootstrap();
