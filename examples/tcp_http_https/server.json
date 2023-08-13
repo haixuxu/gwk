@@ -1,0 +1,9 @@
+{
+    "serverHost": "gank007.com",
+    "tunnelAddr": 4443,
+    "httpAddr": 80,
+    "httpsAddr": 443,
+    "tlsCA":"./rootCA/rootCA.crt",
+    "tlsCrt":"./cert/my.crt",
+    "tlsKey":"./cert/my.key.pem"
+}

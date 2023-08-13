@@ -1,0 +1,16 @@
+{
+    "tunnelHost":"127.0.0.1",
+    "tunnelAddr":4443,
+    "tunnels":[
+        {
+            "protocol":"tcp",
+            "localPort":22,
+            "remotePort":7200
+        },
+        {
+            "protocol":"tcp",
+            "localPort":8080,
+            "remotePort":8080
+        }
+    ]
+}

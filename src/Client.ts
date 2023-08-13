@@ -71,18 +71,22 @@ class Client {
     handleClose() {}
 
     setupTunnels(socket: net.Socket) {
-        this.tunnelConfList.forEach((tunopts) => {
+        this.tunnelConfList.forEach((tunopts:any) => {
+            if(!tunopts.tid){
+                tunopts.tid = getRamdomUUID();
+            }
             const pno = TunnelReqFrame.getProtocolNo(tunopts.protocol);
-            const tid = getRamdomUUID();
+            const tid = tunopts.tid;
             const tunnelreqFrame = new TunnelReqFrame(TUNNEL_REQ, tid, pno, pno === 0x1 ? tunopts.remotePort : tunopts.subdomain);
             tcpsocketSend(socket, tunnelreqFrame.encode());
             this.tunnels[tid] = new Tunnel(tid, socket, tunopts);
         });
     }
 
-    bootstrap() {
+    bootstrap(retry:boolean) {
         const targetSocket = new net.Socket();
         const self = this;
+        this.logger.info(`${retry?'re':''}connecting ${this.serverHost}:${this.serverPort}`);
         targetSocket.connect(this.serverPort, this.serverHost, () => {
             this.logger.info('connect okok');
             const conn = { socket: targetSocket, authed: false };
@@ -91,11 +95,11 @@ class Client {
             tcpsocketSend(targetSocket, authReq.encode());
         });
         targetSocket.on('error', (err: Error) => {
-            this.logger.error('connect err:', err);
+            this.logger.error('connect err:', err.message);
         });
         targetSocket.on('close',()=>{
-            this.logger.error('server is offline.');
-            process.exit(-1);
+            this.logger.error('server is closed.');
+            setTimeout(()=>this.bootstrap(true),3000);
         });
     }
 }
