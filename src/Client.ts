@@ -90,6 +90,13 @@ class Client {
             let authReq = new AuthFrame(AUTH_REQ, '', 0);
             tcpsocketSend(targetSocket, authReq.encode());
         });
+        targetSocket.on('error', (err: Error) => {
+            this.logger.error('connect err:', err);
+        });
+        targetSocket.on('close',()=>{
+            this.logger.error('server is offline.');
+            process.exit(-1);
+        });
     }
 }
 

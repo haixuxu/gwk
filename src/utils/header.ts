@@ -11,7 +11,5 @@ export function buildHeader(rawHeaders: any) {
         return result;
     }, '');
 
-    // 加上头部结束标记
-    const rawHeaderString = rawHeaderData + '\r\n';
-    return rawHeaderString;
+    return rawHeaderData;
 }

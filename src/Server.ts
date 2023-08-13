@@ -162,6 +162,7 @@ class Server {
 
     handleHttpRequest(req: any, res: any) {
         let host = req.headers['host'];
+        console.log('handleHttpRequest:',host);
         host = host.replace(/:\d+$/, '');
         this.logger.info('webTunnels:', Object.keys(this.webTunnels));
         const tunnel = this.webTunnels[host];
@@ -176,8 +177,10 @@ class Server {
                 // 获取已连接的套接字
                 const socket = req.socket;
                 const headerStr = buildHeader(req.rawHeaders);
+                const reqpack = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${headerStr}\r\n`;
                 // 将请求头和正文写入套接字
-                stream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${headerStr}\r\n`);
+                stream.write(reqpack);
+
                 res.detachSocket(socket);
                 socket.pipe(stream);
                 stream.pipe(socket);
