@@ -25,8 +25,8 @@ export * from './frame';
  * |-----s1 -----|-------32--------|----- 1----|--1--|----domain------|
  *
  * @param {*} TUNNEL_RES frame
- * |<--type[1]-->|----tunnel id ---|----status----|
- * |-----s1 -----|-------32--------|----- 1-------|
+ * |<--type[1]-->|----tunnel id ---|----status----|-message(2)|-----message------|
+ * |-----s1 -----|-------32--------|----- 1-------|-----2-----|--------------------|
  *
  * @param {*} STREAM_INIT frame
  * |<--type[1]-->|----tunnel id ---|----stream id----|
@@ -71,13 +71,15 @@ export function decode(data: Buffer): any {
         if (prototype === 0x1) {
             value = data[34] * 256 + data[35];
         } else {
-            value = data.slice(35, 35+data[34]).toString();
+            value = data.slice(35, 35 + data[34]).toString();
         }
         return new TunnelReqFrame(type, tunnelId, data[33], value);
     } else if (type === TUNNEL_RES) {
         const tunnelId = data.slice(1, 33).toString();
         const status = data[33];
-        return new TunnelResFrame(type, tunnelId, status);
+        const datalen = data[34] * 256 + data[35];
+        const message2 = data.slice(36, 36 + datalen).toString();
+        return new TunnelResFrame(type, tunnelId, status, message2);
     } else {
         const tunnelId = data.slice(1, 33).toString();
         const streamId = data.slice(33, 65).toString();

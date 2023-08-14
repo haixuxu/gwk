@@ -22,7 +22,7 @@ class Server {
         this.listenPort = opts.tunnelAddr || 4443;
         this.listenHttpPort = opts.httpAddr;
         this.listenHttpsPort = opts.httpsAddr;
-        this.serverHost = opts.domain || 'gank007.com';
+        this.serverHost = opts.serverHost || 'gank007.com';
         this.connections = {};
         this.tunnels = {};
         this.tlsOpts = {
@@ -45,6 +45,8 @@ class Server {
                     tunnelObj
                         .createStream()
                         .then((stream: any) => {
+                            this.logger.info('create stream for', tunnelObj.url);
+
                             socket2.pipe(stream);
                             stream.pipe(socket2);
 
@@ -60,9 +62,13 @@ class Server {
                 server.listen(frame.port, () => {
                     this.logger.info('tunnel listen on :' + frame.port);
                     tunnelObj.server = server;
+                    tunnelObj.url = 'tcp://' + this.serverHost + ':' + frame.port;
                     self.tunnels[frame.tunnelId] = tunnelObj;
                     conn.tunnels.push(tunnelObj);
                     resolve(tunnelObj);
+                });
+                server.on('error', function(err) {
+                    reject(err);
                 });
             } else {
                 const opts: any = { localPort: frame.port, protocol: frame.protocol };
@@ -76,8 +82,15 @@ class Server {
                 opts.fulldomain = subdomainfull;
                 const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
 
-                self.tunnels[frame.tunnelId] = tunnelObj;
+                if (self.webTunnels[subdomainfull]) {
+                    const err = Error('subdomain existed!');
+                    this.logger.error(err.message);
+                    reject(err);
+                    return;
+                }
+                tunnelObj.url = `http(s)://${subdomainfull}/`;
                 self.webTunnels[subdomainfull] = tunnelObj;
+                self.tunnels[frame.tunnelId] = tunnelObj;
                 conn.tunnels.push(tunnelObj);
                 resolve(tunnelObj);
             }
@@ -99,11 +112,18 @@ class Server {
             } else if (frame.type === PONG_FRAME) {
                 // this.logger.info('rtt:', Date.now() - parseInt(frame.stime));
             } else if (frame.type === TUNNEL_REQ) {
-                this.setupTunnel(conn, frame).then((tunnel) => {
-                    // create tunnel for tcp ok
-                    const tunresframe = new TunnelResFrame(TUNNEL_RES, tunnel.id, 0x1);
-                    tcpsocketSend(conn.socket, tunresframe.encode());
-                });
+                this.setupTunnel(conn, frame)
+                    .then((tunnel) => {
+                        // create tunnel for tcp ok
+                        const tunresframe = new TunnelResFrame(TUNNEL_RES, tunnel.id, 0x1, tunnel.url);
+                        tcpsocketSend(conn.socket, tunresframe.encode());
+                    })
+                    .catch((err) => {
+                        this.logger.error('error:', err.message);
+                        // response tunnel error
+                        const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x2, err.message);
+                        tcpsocketSend(conn.socket, tunresframe.encode());
+                    });
             } else if (frame.type >= 0xf0) {
                 const tunnel = this.tunnels[frame.tunnelId];
                 if (tunnel) {
@@ -168,7 +188,7 @@ class Server {
     handleHttpRequest(req: any, res: any) {
         let host = req.headers['host'];
         host = host.replace(/:\d+$/, '');
-        this.logger.info('webTunnels:', Object.keys(this.webTunnels));
+        // this.logger.info('webTunnels:', Object.keys(this.webTunnels));
         const tunnel = this.webTunnels[host];
         if (!tunnel) {
             res.end('service host missing!');
@@ -177,7 +197,8 @@ class Server {
         tunnel
             .createStream()
             .then((stream: any) => {
-                this.logger.info('create stream for host:', host);
+                // this.logger.info('create stream for host:', host);
+                this.logger.info('create stream on tunnel:', tunnel.id);
                 // 获取已连接的套接字
                 const socket = req.socket;
                 const headerStr = buildHeader(req.rawHeaders);

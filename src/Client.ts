@@ -5,6 +5,7 @@ import { bindStreamSocket, tcpsocketSend } from './utils/socket';
 import { getRamdomUUID } from './utils/uuid';
 import { Tunnel } from './tunnel';
 import getCustomLogger, { Logger } from './utils/logger';
+import { stringifyExclude } from './utils/replacer';
 
 class Client {
     serverHost: string;
@@ -31,9 +32,14 @@ class Client {
                     tcpsocketSend(conn.socket, pongFrame.encode());
                     return;
                 } else if (frame.type === TUNNEL_RES) {
+                    if(frame.status!==0x1){
+                        this.logger.error('req tunnel failed:',frame.message);
+                        return;
+                    }
                     const tunnel = self.tunnels[frame.tunnelId];
+                    this.logger.info(`tunnel setup ok:${frame.message}`);
                     tunnel.on('stream', (stream: any) => {
-                        this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
+                        // this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
                         const localPort = tunnel.opts.localPort;
                         const localsocket = new net.Socket();
                         this.logger.info('connect 127.0.0.1:' + localPort);
@@ -75,6 +81,7 @@ class Client {
             if(!tunopts.tid){
                 tunopts.tid = getRamdomUUID();
             }
+            this.logger.info("req tunnel:"+JSON.stringify(tunopts,stringifyExclude.bind(null,'tid')));
             const pno = TunnelReqFrame.getProtocolNo(tunopts.protocol);
             const tid = tunopts.tid;
             const tunnelreqFrame = new TunnelReqFrame(TUNNEL_REQ, tid, pno, pno === 0x1 ? tunopts.remotePort : tunopts.subdomain);
@@ -83,7 +90,7 @@ class Client {
         });
     }
 
-    bootstrap(retry:boolean) {
+    bootstrap(retry?:boolean) {
         const targetSocket = new net.Socket();
         const self = this;
         this.logger.info(`${retry?'re':''}connecting ${this.serverHost}:${this.serverPort}`);

@@ -8,7 +8,7 @@ export const TUNNEL_RES = 0xa9; // response tunnel
 export const PING_FRAME = 0x6;
 export const PONG_FRAME = 0x9;
 
-// stream 
+// stream
 export const STREAM_INIT = 0xf0;
 export const STREAM_EST = 0xf1;
 export const STREAM_DATA = 0xf2;
@@ -71,7 +71,7 @@ export class TunnelReqFrame {
     static getProtocolNo(proto: string) {
         return proto === 'tcp' ? 0x1 : 0x2; // tcp 0x1, web 0x2
     }
-    constructor(type: number,tunnelId:string, protype: number, value: any) {
+    constructor(type: number, tunnelId: string, protype: number, value: any) {
         this.type = type;
         this.tunnelId = tunnelId;
         if (protype === 0x1) {
@@ -91,7 +91,7 @@ export class TunnelReqFrame {
         } else {
             buf = Buffer.concat([buf, Buffer.from([this.subdomain.length]), Buffer.from(this.subdomain)]);
         }
-        return Buffer.concat([prefix,Buffer.from(this.tunnelId),buf]);
+        return Buffer.concat([prefix, Buffer.from(this.tunnelId), buf]);
     }
 }
 
@@ -99,15 +99,21 @@ export class TunnelResFrame {
     type: number;
     status: number;
     tunnelId: string;
-    constructor(type: number, tunnelId: string, status: number) {
+    message: string;
+    constructor(type: number, tunnelId: string, status: number, message: string) {
         this.type = type;
         this.tunnelId = tunnelId;
         this.status = status;
+        this.message = message;
     }
 
     encode(): Buffer {
         const prefix = Buffer.from([this.type]);
-        return Buffer.concat([prefix, Buffer.from(this.tunnelId),Buffer.from([this.status])]);
+        const len = this.message.length;
+        const lenBuf = Buffer.from([len>>8,len%256]);
+
+        const messageBuf = Buffer.from(this.message);
+        return Buffer.concat([prefix, Buffer.from(this.tunnelId), Buffer.from([this.status]), lenBuf, messageBuf]);
     }
 }
 
@@ -126,10 +132,10 @@ export class StreamFrame {
     encode(): Buffer {
         const prefix = Buffer.from([this.type]);
         const buf = Buffer.concat([prefix, Buffer.from(this.tunnelId), Buffer.from(this.streamId)]);
-        if(!this.data){
+        if (!this.data) {
             return buf;
-        }else{
-            return Buffer.concat([buf,this.data]);
+        } else {
+            return Buffer.concat([buf, this.data]);
         }
     }
 }

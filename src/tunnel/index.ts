@@ -15,6 +15,7 @@ export class Tunnel extends EventEmitter {
     streams: Record<string, GankStream>;
     opts: TunnelOpts;
     server: any;
+    url: string;
     constructor(tid: string, socket: net.Socket, opts: TunnelOpts) {
         super();
         this.id = tid;
@@ -23,6 +24,7 @@ export class Tunnel extends EventEmitter {
         this.defers = {};
         this.streams = {};
         this.server = null;
+        this.url = '';
     }
 
     resetStream(streamId: string) {
@@ -31,7 +33,7 @@ export class Tunnel extends EventEmitter {
     }
     bindClose(stream: GankStream) {
         const self = this;
-        stream.on('close', function () {
+        stream.on('close', function() {
             const finFrame = new StreamFrame(STREAM_FIN, self.id, stream.id);
             try {
                 tcpsocketSend(self.socket, finFrame.encode());
@@ -59,7 +61,7 @@ export class Tunnel extends EventEmitter {
         if (frame.type === STREAM_INIT) {
             // client init stream
             const streamId = frame.streamId;
-            const stream = new GankStream(function (data: Buffer) {
+            const stream = new GankStream(function(data: Buffer) {
                 const dataFrame = new StreamFrame(STREAM_DATA, self.id, streamId, data);
                 self.sendFrame(dataFrame);
             });
@@ -71,7 +73,7 @@ export class Tunnel extends EventEmitter {
             // server check est stream
             const defer = this.defers[frame.streamId];
             const streamId = frame.streamId;
-            const stream = new GankStream(function (data: Buffer) {
+            const stream = new GankStream(function(data: Buffer) {
                 const dataFrame = new StreamFrame(STREAM_DATA, self.id, streamId, data);
                 self.sendFrame(dataFrame);
             });

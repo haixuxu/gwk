@@ -3,6 +3,8 @@ import fs, { readFileSync } from 'fs';
 import path from 'path';
 import Client from './Client';
 import Server from './Server';
+import { genSubdomain } from './utils/subdomain';
+import { TunnelOpts } from './types';
 
 const pkgObj = readJsonFile(path.resolve(__dirname, '../package.json'));
 commander.version(pkgObj.version).description('gank for portmap');
@@ -31,12 +33,11 @@ commander
             serverOpts.tlsCrt = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsCrt), 'utf8');
             serverOpts.tlsKey = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsKey), 'utf8');
         }
-        if(serverOpts.tlsCA){
-            console.log('read ca...')
+        if (serverOpts.tlsCA) {
             serverOpts.tlsCA = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsCA), 'utf8');
         }
         const server = new Server(serverOpts);
-      
+
         server.bootstrap();
     });
 
@@ -44,10 +45,24 @@ commander
     .command('client')
     .description('Starts the gank client')
     .option('-c, --config <path>', 'Path to the client configuration file')
+    .option('-p, --port <port>', 'set web tunnel local port')
+    .option('-s, --subdomain <subdomain>', 'set web tunnel subdomain')
     .action((cmd: any) => {
-        const configPath = cmd.config || 'client.json';
-        console.log(`Starting gank client with config: ${configPath}`);
-        const clientOpts = readJsonFile(configPath);
+        const configPath = cmd.config;
+        let clientOpts: any = {};
+        if (configPath) {
+            console.log(`Starting gank client with config: ${configPath}`);
+            clientOpts = readJsonFile(configPath);
+        } else {
+            const subdomain = genSubdomain();
+            const tunnelItem: TunnelOpts = { protocol: 'web', subdomain, localPort: cmd.port || 8080 };
+            clientOpts.tunnels = [tunnelItem];
+        }
+
+        if (!clientOpts.tunnelHost) {
+            clientOpts.tunnelHost = 'gank.75cos.com';
+            clientOpts.tunnelAddr = 4443;
+        }
         const client = new Client(clientOpts);
         client.bootstrap();
     });

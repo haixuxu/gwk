@@ -16,7 +16,7 @@ export interface GankClientOpts {
 }
 
 export interface GankServerOpts {
-    domain?: string; // default  gank.com
+    serverHost?: string; // default  gank007.com
     httpAddr?: number; // default 80
     httpsAddr?: number; // default 443
     logLevel?: string; // default info
