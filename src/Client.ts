@@ -37,7 +37,7 @@ class Client {
                         return;
                     }
                     const tunnel = self.tunnels[frame.tunnelId];
-                    this.logger.info(`tunnel setup ok: ${frame.message}`);
+                    this.logger.info(`tunnel setup ok: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`);
                     tunnel.on('stream', (stream: any) => {
                         // this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
                         const localPort = tunnel.opts.localPort;
