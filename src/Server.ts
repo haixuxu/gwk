@@ -88,7 +88,7 @@ class Server {
                     reject(err);
                     return;
                 }
-                tunnelObj.url = `http(s)://${subdomainfull}/`;
+                tunnelObj.url = `http://${subdomainfull}/`;
                 self.webTunnels[subdomainfull] = tunnelObj;
                 self.tunnels[frame.tunnelId] = tunnelObj;
                 conn.tunnels.push(tunnelObj);
