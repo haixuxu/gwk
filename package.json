@@ -27,15 +27,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xuxihai123/gank.git"
+    "url": "git+https://github.com/xuxihai123/gwk.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/xuxihai123/gank/issues"
+    "url": "https://github.com/xuxihai123/gwk/issues"
   },
-  "homepage": "https://github.com/xuxihai123/gank#readme",
+  "homepage": "https://github.com/xuxihai123/gwk#readme",
   "dependencies": {
     "commander": "7.x",
     "uuid": "^9.0.0"
