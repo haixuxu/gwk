@@ -1,11 +1,16 @@
 {
-  "name": "gank",
-  "version": "1.0.0",
+  "name": "gankcli",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "bin": {
     "gank": "cli.js"
   },
+  "files": [
+    "bin",
+    "examples",
+    "lib"
+  ],
   "scripts": {
     "dev": "ts-node src/cli.ts",
     "build": "rimraf ./lib && tsc"
@@ -15,6 +20,7 @@
     "@types/uuid": "^9.0.2",
     "mkdirp": "^3.0.1",
     "node-forge": "^1.3.1",
+    "rimraf": "^5.0.1",
     "ts-node": "^10.9.1",
     "tsx": "^3.12.7",
     "typescript": "^5.1.5"
