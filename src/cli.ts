@@ -7,7 +7,7 @@ import { genSubdomain } from './utils/subdomain';
 import { TunnelOpts } from './types';
 
 const pkgObj = readJsonFile(path.resolve(__dirname, '../package.json'));
-commander.version(pkgObj.version).description('gank for portmap');
+commander.version(pkgObj.version).description('gwk for portmap');
 
 function readJsonFile(filepath: string): any {
     try {
@@ -23,11 +23,11 @@ function readJsonFile(filepath: string): any {
 
 commander
     .command('server')
-    .description('Starts the gank server')
+    .description('Starts the gwk server')
     .option('-c, --config <path>', 'Path to the server configuration file')
     .action((cmd: any) => {
         const configPath = cmd.config || 'server.json';
-        console.log(`Starting gank server with config: ${configPath}`);
+        console.log(`Starting gwk server with config: ${configPath}`);
         const serverOpts = readJsonFile(configPath);
         if (serverOpts.tlsCrt) {
             serverOpts.tlsCrt = fs.readFileSync(path.resolve(process.cwd(), serverOpts.tlsCrt), 'utf8');
@@ -43,7 +43,7 @@ commander
 
 commander
     .command('client')
-    .description('Starts the gank client')
+    .description('Starts the gwk client')
     .option('-c, --config <path>', 'Path to the client configuration file')
     .option('-p, --port <port>', 'set web tunnel local port')
     .option('-s, --subdomain <subdomain>', 'set web tunnel subdomain')
@@ -51,7 +51,7 @@ commander
         const configPath = cmd.config;
         let clientOpts: any = {};
         if (configPath) {
-            console.log(`Starting gank client with config: ${configPath}`);
+            console.log(`Starting gwk client with config: ${configPath}`);
             clientOpts = readJsonFile(configPath);
         } else {
             const subdomain = genSubdomain();

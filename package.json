@@ -1,10 +1,10 @@
 {
-  "name": "gankcli",
+  "name": "gwk",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "bin": {
-    "gank": "bin/cli.js"
+    "gwk": "bin/cli.js"
   },
   "files": [
     "bin",

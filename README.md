@@ -19,7 +19,7 @@ remotely.
 # install
 
 ```bash
-npm install -g gankcli
+npm install -g gwk
 ```
 
 # server
@@ -27,7 +27,7 @@ npm install -g gankcli
 ```bash
 gank server -c server.json
 # start with pm2
-pm2 start gank --name gankapp -- server -c server.json
+pm2 start gank --name gwk -- server -c server.json
 ```
 
 server.json
