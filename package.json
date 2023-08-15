@@ -1,6 +1,6 @@
 {
   "name": "gwk",
-  "version": "0.0.1-rc.001",
+  "version": "0.0.1-rc.002",
   "description": "",
   "main": "index.js",
   "bin": {
