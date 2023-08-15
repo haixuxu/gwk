@@ -1,6 +1,6 @@
 # gwk
 
-Gank is a tool that helps you expose your local servers or services to the
+Gwk is a tool that helps you expose your local servers or services to the
 internet, even in a private network. It supports both TCP and subdomain modes.
 
 
@@ -14,13 +14,13 @@ npm install -g gwk
 
 ```bash
 # example 1 , detault dispatch to 127.0.0.1:8080
-gank client
+gwk client
 # example 2
-gank client --port 8080
+gwk client --port 8080
 # example 3
-gank client --subdomain testabc001 --port 8000
+gwk client --subdomain testabc001 --port 8000
 # example 4
-gank client -c client.json
+gwk client -c client.json
 ```
 
 client.json
@@ -67,7 +67,7 @@ server.json
 
 ```json
 {
-  "serverHost": "gank007.com", // 使用web 隧道时, 需要域名
+  "serverHost": "gwk007.com", // 使用web 隧道时, 需要域名
   "tunnelAddr": 4443, // 隧道监听端口
   "httpAddr": 80, // 启动http服务
   "httpsAddr": 443, // 启动https服务, 需要后面的证书配置
