@@ -3,7 +3,7 @@
     "tunnelAddr": 4443,
     "httpAddr": 80,
     "httpsAddr": 443,
-    "tlsCA":"./rootCA/rootCA.crt",
-    "tlsCrt":"./cert/my.crt",
-    "tlsKey":"./cert/my.key.pem"
+    "tlsCA":"./etc/certs/rootCA.crt",
+    "tlsCrt":"./etc/certs/gank007.com/my.crt",
+    "tlsKey":"./etc/certs/gank007.com/my.key.pem"
 }
