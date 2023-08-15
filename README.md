@@ -10,32 +10,10 @@ internet, even in a private network. It supports both TCP and subdomain modes.
 npm install -g gwk
 ```
 
-# server
-
-```bash
-gank server -c server.json
-# start with pm2
-pm2 start gank --name gwk -- server -c server.json
-```
-
-server.json
-
-```json
-{
-  "serverHost": "gank007.com", // 使用web 隧道时, 需要域名
-  "tunnelAddr": 4443, // 隧道监听端口
-  "httpAddr": 80, // 启动http服务
-  "httpsAddr": 443, // 启动https服务, 需要后面的证书配置
-  "tlsCA": "./rootCA/rootCA.crt", // 使用自签名证书用到
-  "tlsCrt": "./cert/my.crt",
-  "tlsKey": "./cert/my.key.pem"
-}
-```
-
 # client
 
 ```bash
-# example 1 
+# example 1 , detault dispatch to 127.0.0.1:8080
 gank client
 # example 2
 gank client --port 8080
@@ -75,3 +53,27 @@ client.json
   ]
 }
 ```
+
+
+# setup a gwk server
+
+```bash
+gwk server -c server.json
+# start with pm2
+pm2 start gwk --name gwkapp -- server -c server.json
+```
+
+server.json
+
+```json
+{
+  "serverHost": "gank007.com", // 使用web 隧道时, 需要域名
+  "tunnelAddr": 4443, // 隧道监听端口
+  "httpAddr": 80, // 启动http服务
+  "httpsAddr": 443, // 启动https服务, 需要后面的证书配置
+  "tlsCA": "./rootCA/rootCA.crt", // 使用自签名证书用到
+  "tlsCrt": "./cert/my.crt",
+  "tlsKey": "./cert/my.key.pem"
+}
+```
+
