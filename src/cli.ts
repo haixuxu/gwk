@@ -54,9 +54,9 @@ commander
             console.log(`Starting gwk client with config: ${configPath}`);
             clientOpts = readJsonFile(configPath);
         } else {
-            const subdomain = cmd.subdomain||genSubdomain();
+            const subdomain = cmd.subdomain || genSubdomain();
             const tunnelItem: TunnelOpts = { protocol: 'web', subdomain, localPort: cmd.port || 8080 };
-            clientOpts.tunnels = [tunnelItem];
+            clientOpts.tunnels = { unnamed: tunnelItem };
         }
 
         if (!clientOpts.tunnelHost) {

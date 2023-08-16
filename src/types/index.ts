@@ -1,4 +1,5 @@
 export interface TunnelOpts {
+    name?:string;
     protocol: string; // tcp/web
     localPort: number;
     subdomain?: string; // http only
@@ -12,7 +13,7 @@ export interface GankClientOpts {
     tunnelHost: string; // for tcp connect remote server
     logLevel: string;
     logFile: string;
-    tunnels: Array<TunnelOpts>;
+    tunnels: Record<string,TunnelOpts>;
 }
 
 export interface GankServerOpts {

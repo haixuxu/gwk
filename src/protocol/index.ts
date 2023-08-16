@@ -6,46 +6,46 @@ export * from './frame';
  * // required: type, token
  * @param {*} AUTH_REQ frame
  * |<--type[1]-->|--status(1)--|<------auth token(32)------>|
- * |-----s1 -----|------0------|--------------s2------------|
+ * |-----1 -----|------0------|--------------s2------------|
  *
  * @param {*} AUTH_RES frame
  * |<--type[1]-->|--status(1)--|<------auth token(32)------>|
- * |-----s1 -----|-----1/2-----|--------------s2------------|
+ * |-----1 -----|-----1/2-----|--------------s2------------|
  *
  * @param {*} PING frame
  * |<--type[1]-->|----stime---|
- * |-----s1 -----|------13------|
+ * |-----1 -----|------13------|
  * @param {*} PONG frame
  * |<--type[1]-->|----stime---|-----atime-----|
- * |-----s1 -----|---- 13-----|-----13--------|
+ * |-----1 -----|---- 13-----|-----13--------|
  *
  * @param {*} TUNNEL_REQ frame
- * |<--type[1]-->|----tunnel id ---|----pro----|----port/subdomain----|
- * |-----s1 -----|-------32--------|----- 1----|-------port-----------|
- * |-----s1 -----|-------32--------|----- 1----|--1--|----domain------|
+ * |<--type[1]-->|----pro----|----port/subdomain----|
+ * |-----1 -----|----- 1----|-------port-----------|
+ * |-----1 -----|----- 1----|--1--|----domain------|
  *
  * @param {*} TUNNEL_RES frame
- * |<--type[1]-->|----tunnel id ---|----status----|-message(2)|-----message------|
- * |-----s1 -----|-------32--------|----- 1-------|-----2-----|--------------------|
+ * |<--type[1]-->|----status----|-message(2)|-----message------|
+ * |-----1 -----|----- 1-------|-----2-----|--------------------|
  *
  * @param {*} STREAM_INIT frame
- * |<--type[1]-->|----tunnel id ---|----stream id----|
- * |-----s1 -----|-------32--------|------- 32-------|
+ * |<--type[1]-->|----stream id----|
+ * |-----1 -----|------- 16-------|
  * @param {*} STREAM_EST frame
- * |<--type[1]-->|----tunnel id ---|----stream id----|
- * |-----s1 -----|-------32--------|------- 32-------|
+ * |<--type[1]-->|----stream id----|
+ * |-----1 -----|------- 16-------|
  *
  * @param {*} STREAM_DATA frame
- * |<--type[1]-->|----tunnel id ---|----stream id----|-------data--------|
- * |-----s1 -----|-------32--------|------- 32-------|-------------------|
+ * |<--type[1]-->|----stream id----|-------data--------|
+ * |-----1 -----|------- 16-------|-------------------|
  *
  * @param {*} STREAM_RST frame
- * |<--type[1]-->|----tunnel id ---|----stream id----|
- * |-----s1 -----|-------32--------|------- 32-------|
+ * |<--type[1]-->|----stream id----|
+ * |-----1 -----|------- 16-------|
  *
  * @param {*} STREAM_FIN frame
- * |<--type[1]-->|----tunnel id ---|----stream id----|
- * |-----s1 -----|-------32--------|------- 32-------|
+ * |<--type[1]-->|----stream id----|
+ * |-----1 -----|------- 16-------|
  * @returns
  */
 
@@ -65,25 +65,22 @@ export function decode(data: Buffer): any {
         const atime = data.slice(14, 27).toString();
         return new PongFrame(type, stime, atime);
     } else if (type === TUNNEL_REQ) {
-        const tunnelId = data.slice(1, 33).toString();
-        const prototype = data[33];
+        const proto = data[1];
         let value: any;
-        if (prototype === 0x1) {
-            value = data[34] * 256 + data[35];
+        if (proto === 0x1) {
+            value = data[2] * 256 + data[3];
         } else {
-            value = data.slice(35, 35 + data[34]).toString();
+            value = data.slice(3, 3 + data[2]).toString();
         }
-        return new TunnelReqFrame(type, tunnelId, data[33], value);
+        return new TunnelReqFrame(type,proto, value);
     } else if (type === TUNNEL_RES) {
-        const tunnelId = data.slice(1, 33).toString();
-        const status = data[33];
-        const datalen = data[34] * 256 + data[35];
-        const message2 = data.slice(36, 36 + datalen).toString();
-        return new TunnelResFrame(type, tunnelId, status, message2);
+        const status = data[1];
+        const datalen = data[2] * 256 + data[3];
+        const message2 = data.slice(4, 4 + datalen).toString();
+        return new TunnelResFrame(type, status, message2);
     } else {
-        const tunnelId = data.slice(1, 33).toString();
-        const streamId = data.slice(33, 65).toString();
-        const dataBuf = data.slice(65);
-        return new StreamFrame(type, tunnelId, streamId, dataBuf);
+        const streamId = data.slice(1, 17).toString('hex');
+        const dataBuf = data.slice(17);
+        return new StreamFrame(type, streamId, dataBuf);
     }
 }

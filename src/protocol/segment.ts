@@ -17,7 +17,7 @@ function frameSegment(frame: StreamFrame): Array<StreamFrame> {
         if (offset2 > len) {
             offset2 = len;
         }
-        const frame2 = new StreamFrame(frame.type, frame.tunnelId, frame.streamId);
+        const frame2 = new StreamFrame(frame.type, frame.streamId);
         frame2.data = frame.data.slice(offset, offset2);
         list.push(frame2);
         offset = offset2;

@@ -11,7 +11,6 @@ import getCustomLogger, { Logger } from './utils/logger';
 class Server {
     private listenPort: number;
     private connections: any;
-    private tunnels: Record<string, Tunnel>;
     listenHttpPort: number | undefined;
     listenHttpsPort: number | undefined;
     tlsOpts: { ca: string | undefined; key: string | undefined; cert: string | undefined };
@@ -24,7 +23,6 @@ class Server {
         this.listenHttpsPort = opts.httpsAddr;
         this.serverHost = opts.serverHost || 'gank007.com';
         this.connections = {};
-        this.tunnels = {};
         this.tlsOpts = {
             ca: opts.tlsCA,
             key: opts.tlsKey,
@@ -39,7 +37,7 @@ class Server {
         return new Promise((resolve, reject) => {
             if (frame.protocol === 0x1) {
                 const opts = { localPort: frame.port, protocol: frame.protocol, remotePort: frame.port };
-                const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
+                const tunnelObj = new Tunnel(conn.socket, opts as any);
                 const server = net.createServer((socket2) => {
                     this.logger.info('handle socket on ', frame.port + '');
                     tunnelObj
@@ -63,11 +61,11 @@ class Server {
                     this.logger.info('tunnel listen on :' + frame.port);
                     tunnelObj.server = server;
                     tunnelObj.url = 'tcp://' + this.serverHost + ':' + frame.port;
-                    self.tunnels[frame.tunnelId] = tunnelObj;
-                    conn.tunnels.push(tunnelObj);
+                    conn.tunnel = tunnelObj;
+
                     resolve(tunnelObj);
                 });
-                server.on('error', function(err) {
+                server.on('error', function (err) {
                     reject(err);
                 });
             } else {
@@ -80,7 +78,7 @@ class Server {
                 }
                 const subdomainfull = frame.subdomain + '.' + this.serverHost;
                 opts.fulldomain = subdomainfull;
-                const tunnelObj = new Tunnel(frame.tunnelId, conn.socket, opts as any);
+                const tunnelObj = new Tunnel(conn.socket, opts as any);
 
                 if (self.webTunnels[subdomainfull]) {
                     const err = Error('subdomain existed!');
@@ -89,9 +87,9 @@ class Server {
                     return;
                 }
                 tunnelObj.url = `http://${subdomainfull}/`;
+                conn.tunnel = tunnelObj;
+
                 self.webTunnels[subdomainfull] = tunnelObj;
-                self.tunnels[frame.tunnelId] = tunnelObj;
-                conn.tunnels.push(tunnelObj);
                 resolve(tunnelObj);
             }
         });
@@ -115,20 +113,17 @@ class Server {
                 this.setupTunnel(conn, frame)
                     .then((tunnel) => {
                         // create tunnel for tcp ok
-                        const tunresframe = new TunnelResFrame(TUNNEL_RES, tunnel.id, 0x1, tunnel.url);
+                        const tunresframe = new TunnelResFrame(TUNNEL_RES, 0x1, tunnel.url);
                         tcpsocketSend(conn.socket, tunresframe.encode());
                     })
                     .catch((err) => {
                         this.logger.error('error:', err.message);
                         // response tunnel error
-                        const tunresframe = new TunnelResFrame(TUNNEL_RES, frame.tunnelId, 0x2, err.message);
+                        const tunresframe = new TunnelResFrame(TUNNEL_RES, 0x2, err.message);
                         tcpsocketSend(conn.socket, tunresframe.encode());
                     });
             } else if (frame.type >= 0xf0) {
-                const tunnel = this.tunnels[frame.tunnelId];
-                if (tunnel) {
-                    tunnel.dispatchFrame(frame);
-                }
+                conn.tunnel!.dispatchFrame(frame);
             }
         } catch (error) {
             this.logger.info('error:', error);
@@ -141,19 +136,17 @@ class Server {
     }
 
     releaseConn(conn: any) {
-        const tunnels = conn.tunnels || [];
-        tunnels.forEach((temp: Tunnel) => {
-            if (temp.server) {
-                this.logger.info(`release tunnel listen on :${temp.opts.remotePort}`);
-                temp.server.close();
-            }
-            delete this.tunnels[temp.id]; // remove this.tunnels element
-            const fulldomain = temp.opts.fulldomain;
-            if (fulldomain) {
-                delete this.webTunnels[fulldomain];
-                this.logger.info(`release tunnel listen on :${temp.opts.fulldomain}`);
-            }
-        });
+        const tunnel = conn.tunnel;
+        if(!tunnel) return;
+        if (tunnel.server) {
+            this.logger.info(`release tunnel listen on :${tunnel.opts.remotePort}`);
+            tunnel.server.close();
+        }
+        const fulldomain = tunnel.opts.fulldomain;
+        if (fulldomain) {
+            delete this.webTunnels[fulldomain];
+            this.logger.info(`release tunnel listen on :${tunnel.opts.fulldomain}`);
+        }
     }
 
     handleConection(socket: net.Socket) {
@@ -162,7 +155,7 @@ class Server {
         // response tunnel OK
         const self = this;
         const cid = getRamdomUUID();
-        const conn: any = { cid, socket, tunnels: [] };
+        const conn: any = { cid, socket };
         bindStreamSocket(socket, self.handleData.bind(self, conn), self.handleError.bind(self, conn), self.handleClose.bind(self, conn));
     }
 
@@ -198,7 +191,7 @@ class Server {
             .createStream()
             .then((stream: any) => {
                 // this.logger.info('create stream for host:', host);
-                this.logger.info('create stream on tunnel:', tunnel.id);
+                this.logger.info('create stream on tunnel.');
                 // 获取已连接的套接字
                 const socket = req.socket;
                 const headerStr = buildHeader(req.rawHeaders);
