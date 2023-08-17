@@ -5,7 +5,7 @@ import Client from './Client';
 import Server from './Server';
 import { genSubdomain } from './utils/subdomain';
 import { TunnelOpts } from './types';
-import { readFile } from './utils/readjson';
+import { readFile } from './utils/readfile';
 
 const pkgObj = readFile(path.resolve(__dirname, '../package.json'), true);
 
