@@ -14,13 +14,13 @@ npm install -g gwk
 
 ```bash
 # example 1 , detault dispatch to 127.0.0.1:8080
-gwk client
+gwk
 # example 2
-gwk client --port 8080
+gwk  --port 8080
 # example 3
-gwk client --subdomain testabc001 --port 8000
+gwk  --subdomain testabc001 --port 8000
 # example 4
-gwk client -c client.json
+gwk  -c client.json
 ```
 
 client.json
@@ -58,9 +58,9 @@ client.json
 # setup a gwk server
 
 ```bash
-gwk server -c server.json
+gwkd  -c server.json
 # start with pm2
-pm2 start gwk --name gwkapp -- server -c server.json
+pm2 start gwkd --name gwkapp -- server -c server.json
 ```
 
 server.json
