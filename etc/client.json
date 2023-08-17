@@ -1,26 +1,26 @@
 {
     "tunnelHost":"127.0.0.1",
     "tunnelAddr":4443,
-    "tunnels":[
-        {
+    "tunnels":{
+        "tcp001":{
             "protocol":"tcp",
             "localPort":5000,
             "remotePort":7200
         },
-        {
+        "tcp002":{
             "protocol":"tcp",
             "localPort":5000,
             "remotePort":7500
         },
-        {
+        "webapp02":{
             "protocol":"web",
             "localPort":4900,
             "subdomain":"app02"
         },
-        {
+        "webappmob":{
             "protocol":"web",
             "localPort":9000,
             "subdomain":"mob"
         }
-    ]
+    }
 }

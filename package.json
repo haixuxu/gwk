@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "gwk": "bin/cli.js"
+    "gwk": "bin/gwk.js",
+    "gwkd": "bin/gwkd.js"
   },
   "files": [
     "bin",
@@ -12,7 +13,7 @@
     "lib"
   ],
   "scripts": {
-    "dev": "ts-node src/cli.ts",
+    "dev": "tsc -w",
     "build": "rimraf ./lib && tsc"
   },
   "devDependencies": {
