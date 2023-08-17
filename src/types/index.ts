@@ -5,6 +5,7 @@ export interface TunnelOpts {
     subdomain?: string; // http only
     remotePort?: number;
     fulldomain?:string;
+    status?:string;
 }
 
 export interface GankClientOpts {

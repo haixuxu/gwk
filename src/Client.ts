@@ -4,6 +4,8 @@ import { AUTH_REQ, AUTH_RES, AuthFrame, PING_FRAME, PONG_FRAME, PongFrame, TUNNE
 import { bindStreamSocket, tcpsocketSend } from './utils/socket';
 import { Tunnel } from './tunnel';
 import getCustomLogger, { Logger } from './utils/logger';
+import chalk from 'chalk';
+import printer from './utils/printer';
 // import { stringifyExclude } from './utils/replacer';
 
 class Client {
@@ -22,10 +24,13 @@ class Client {
         if (conn.authed) return;
         if (frame.type === AUTH_RES && frame.status === 0x1) {
             conn.authed = true;
-            this.logger.info('auth ok');
+            // this.logger.info('auth ok');
+            conn.tunnelConf.status = 'auth ok';
             const tunopts = conn.tunnelConf;
             const pno = TunnelReqFrame.getProtocolNo(tunopts.protocol);
-            const tunnelreqFrame = new TunnelReqFrame(TUNNEL_REQ, pno, pno === 0x1 ? tunopts.remotePort : tunopts.subdomain);
+            let port = pno === 0x1 ? tunopts.remotePort : 0;
+            let subdomain = pno === 0x1 ? '' : tunopts.subdomain;
+            const tunnelreqFrame = new TunnelReqFrame(TUNNEL_REQ, pno, tunopts.name, port, subdomain);
             tcpsocketSend(conn.socket, tunnelreqFrame.encode());
             conn.tunnel = new Tunnel(conn.socket, tunopts);
         } else {
@@ -50,30 +55,41 @@ class Client {
             }
             if (frame.type === TUNNEL_RES) {
                 if (frame.status !== 0x1) {
-                    this.logger.error('req tunnel failed:', frame.message);
+                    throw Error(frame.message);
+                    // connObj.tunnelConf.status = 'req tunnel failed!' + frame.message;
+                    // this.logger.error('req tunnel failed:', frame.message);
                     return;
                 }
                 const tunnel = connObj.tunnel;
-                this.logger.info(`tunnel setup ok: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`);
+
+                const successMsg = `tunnel ${chalk.green("ok")}: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`
+                connObj.tunnelConf.status = successMsg;
+                // this.logger.info(`tunnel setup ok: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`);
                 tunnel.on('stream', (stream: any) => {
                     // this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
                     const localPort = tunnel.opts.localPort;
                     const localsocket = new net.Socket();
-                    this.logger.info('connect 127.0.0.1:' + localPort);
+                    connObj.tunnelConf.status = `${successMsg} ${chalk.green('->')}`;
+                    // this.logger.info('connect 127.0.0.1:' + localPort);
                     localsocket.connect(localPort, '127.0.0.1', () => {
-                        this.logger.info('connect ok:', localPort);
+                        // this.logger.info('connect ok:', localPort);
+                        connObj.tunnelConf.status = `${successMsg} ${chalk.green('<->')}`;
                         stream.pipe(localsocket);
                         localsocket.pipe(stream);
                         tunnel.setReady(stream);
                     });
-                    localsocket.on('close', () => stream.destroy());
+                    localsocket.on('close', () => {
+                        connObj.tunnelConf.status = successMsg;
+                        stream.destroy();
+                    });
                     localsocket.on('error', () => stream.destroy());
                     stream.on('close', () => localsocket.destroy());
                 });
             }
             return;
         } catch (err) {
-            this.logger.error((err as any).message);
+            connObj.tunnelConf.status = `tunnel ${chalk.red('failed')}:` + (err as Error).message;
+            // this.logger.error((err as any).message);
             connObj.socket.destroy();
         }
     }
@@ -82,31 +98,66 @@ class Client {
 
     handleClose() {}
 
-    setupTunnel(name: string, tunnelConf: TunnelOpts) {
-        tunnelConf.name = name;
+    setupTunnel(tunnelConf: TunnelOpts) {
         const targetSocket = new net.Socket();
         const self = this;
-        this.logger.info('creating tunnel:', name);
-        this.logger.info(`connecting ${this.serverHost}:${this.serverPort}`);
+        // this.logger.info('creating tunnel:', name);
+        // this.logger.info(`connecting ${this.serverHost}:${this.serverPort}`);
+        tunnelConf.status = 'connecting';
         targetSocket.connect(this.serverPort, this.serverHost, () => {
-            this.logger.info('connect okok');
+            // this.logger.info('connect okok');
+            tunnelConf.status = 'connect ok, starting auth';
             const connObj = { socket: targetSocket, authed: false, tunnelConf };
             bindStreamSocket(targetSocket, self.handleData.bind(self, connObj), self.handleError.bind(self), self.handleClose.bind(self));
             let authReq = new AuthFrame(AUTH_REQ, '', 0);
             tcpsocketSend(targetSocket, authReq.encode());
         });
         targetSocket.on('error', (err: Error) => {
-            this.logger.error('connect err:', err.message, ' retrying');
+            tunnelConf.status = 'connect err:' + err.message;
+            // this.logger.error('connect err:', err.message, ' retrying');
         });
         targetSocket.on('close', () => {
-            this.logger.error('server is closed.');
-            setTimeout(() => this.setupTunnel(name, tunnelConf), 3000);
+            // this.logger.error('server is closed.');
+            // tunnelConf.status='connect err:', err.message;
+            setTimeout(() => this.setupTunnel(tunnelConf), 3000);
         });
     }
 
+    showConsole() {
+        const keys = Object.keys(this.tunnelsMap);
+        let message = 'tunnel list:\n';
+        let linesCount = keys.length + 1;
+        keys.forEach((key: string) => {
+            const tunnelConf = this.tunnelsMap[key];
+            message += tunnelConf.name?.padEnd(16) + '';
+            message += tunnelConf.status + '\n';
+        });
+        // console.log('tunnel===\n'+message);
+        printer.printStatus(message, linesCount);
+    }
+
     bootstrap() {
+        const self = this;
+        Object.entries(this.tunnelsMap || {}).forEach(function (values: any) {
+            values[1].name = values[0];
+            values[1].status = ' starting tunnel ' + values[0];
+        });
+
         Object.keys(this.tunnelsMap).forEach((key: string) => {
-            return this.setupTunnel(key, this.tunnelsMap[key]);
+            const tunnelConf = this.tunnelsMap[key];
+            const proxyConf = new Proxy(tunnelConf, {
+                get: function (target: any, prop) {
+                    return target[prop];
+                },
+                set: function (target: any, prop, value: any) {
+                    target[prop] = value;
+                    if (prop === 'status') {
+                        self.showConsole();
+                    }
+                    return true;
+                },
+            });
+            return this.setupTunnel(proxyConf);
         });
     }
 }

@@ -66,31 +66,32 @@ export class TunnelReqFrame {
     protocol: number;
     port: number = 0;
     subdomain: string = '';
+    name: string;
 
     static getProtocolNo(proto: string) {
         return proto === 'tcp' ? 0x1 : 0x2; // tcp 0x1, web 0x2
     }
-    constructor(type: number, protype: number, value: any) {
+    constructor(type: number, protype: number, name: string, port: number, sudomain: string) {
         this.type = type;
+        this.name = name;
         if (protype === 0x1) {
             this.protocol = 0x1;
-            this.port = value;
+            this.port = port;
         } else {
             this.protocol = 0x2;
-            this.subdomain = value;
+            this.subdomain = sudomain;
         }
     }
 
     encode(): Buffer {
-        const prefix = Buffer.from([this.type]);
-        let buf = Buffer.from([this.protocol]);
+        const prefix = Buffer.from([this.type, this.protocol]);
+        let message = '';
         if (this.protocol === 0x1) {
-            buf = Buffer.concat([buf, Buffer.from([this.port >> 8, this.port % 256])]);
+            message = `${this.name}:${this.port}`;
         } else {
-            // console.log(this.subdomain);
-            buf = Buffer.concat([buf, Buffer.from([this.subdomain.length]), Buffer.from(this.subdomain)]);
+            message = `${this.name}:${this.subdomain}`;
         }
-        return Buffer.concat([prefix, buf]);
+        return Buffer.concat([prefix, Buffer.from(message)]);
     }
 }
 
@@ -98,7 +99,7 @@ export class TunnelResFrame {
     type: number;
     status: number;
     message: string;
-    constructor(type: number,  status: number, message: string) {
+    constructor(type: number, status: number, message: string) {
         this.type = type;
         this.status = status;
         this.message = message;
@@ -107,7 +108,7 @@ export class TunnelResFrame {
     encode(): Buffer {
         const prefix = Buffer.from([this.type]);
         const len = this.message.length;
-        const lenBuf = Buffer.from([len>>8,len%256]);
+        const lenBuf = Buffer.from([len >> 8, len % 256]);
 
         const messageBuf = Buffer.from(this.message);
         return Buffer.concat([prefix, Buffer.from([this.status]), lenBuf, messageBuf]);
@@ -118,7 +119,7 @@ export class StreamFrame {
     type: number;
     streamId: string;
     data?: Buffer;
-    constructor(type: number,  streamId: string, data?: Buffer) {
+    constructor(type: number, streamId: string, data?: Buffer) {
         this.type = type;
         this.streamId = streamId;
         this.data = data;
@@ -126,7 +127,7 @@ export class StreamFrame {
 
     encode(): Buffer {
         const prefix = Buffer.from([this.type]);
-        const buf = Buffer.concat([prefix,  Buffer.from(this.streamId,'hex')]);
+        const buf = Buffer.concat([prefix, Buffer.from(this.streamId, 'hex')]);
         if (!this.data) {
             return buf;
         } else {

@@ -36,14 +36,14 @@ class Server {
         const self = this;
         return new Promise((resolve, reject) => {
             if (frame.protocol === 0x1) {
-                const opts = { localPort: frame.port, protocol: frame.protocol, remotePort: frame.port };
+                const opts = { localPort: frame.port, protocol: frame.protocol, remotePort: frame.port,name:frame.name };
                 const tunnelObj = new Tunnel(conn.socket, opts as any);
                 const server = net.createServer((socket2) => {
                     this.logger.info('handle socket on ', frame.port + '');
                     tunnelObj
                         .createStream()
                         .then((stream: any) => {
-                            this.logger.info('create stream for', tunnelObj.url);
+                            this.logger.info('create stream for', tunnelObj.name);
 
                             socket2.pipe(stream);
                             stream.pipe(socket2);
@@ -69,7 +69,7 @@ class Server {
                     reject(err);
                 });
             } else {
-                const opts: any = { localPort: frame.port, protocol: frame.protocol };
+                const opts: any = { localPort: frame.port, protocol: frame.protocol,name:frame.name };
                 if (!frame.subdomain) {
                     const err = Error('subdomain missing');
                     this.logger.error(err.message);
@@ -139,13 +139,13 @@ class Server {
         const tunnel = conn.tunnel;
         if(!tunnel) return;
         if (tunnel.server) {
-            this.logger.info(`release tunnel listen on :${tunnel.opts.remotePort}`);
+            this.logger.info(`release tunnel unlisten on :${tunnel.opts.remotePort}`);
             tunnel.server.close();
         }
         const fulldomain = tunnel.opts.fulldomain;
         if (fulldomain) {
             delete this.webTunnels[fulldomain];
-            this.logger.info(`release tunnel listen on :${tunnel.opts.fulldomain}`);
+            this.logger.info(`release tunnel unbind   on :${tunnel.opts.fulldomain}`);
         }
     }
 
@@ -191,7 +191,7 @@ class Server {
             .createStream()
             .then((stream: any) => {
                 // this.logger.info('create stream for host:', host);
-                this.logger.info('create stream on tunnel.');
+                this.logger.info('create stream on tunnel:',tunnel.name);
                 // 获取已连接的套接字
                 const socket = req.socket;
                 const headerStr = buildHeader(req.rawHeaders);

@@ -15,8 +15,10 @@ export class Tunnel extends EventEmitter {
     opts: TunnelOpts;
     server: any;
     url: string;
+    name: string | undefined;
     constructor( socket: net.Socket, opts: TunnelOpts) {
         super();
+        this.name=opts.name;
         this.socket = socket;
         this.opts = opts;
         this.defers = {};

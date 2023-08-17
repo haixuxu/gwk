@@ -38,6 +38,7 @@
   },
   "homepage": "https://github.com/xuxihai123/gwk#readme",
   "dependencies": {
+    "chalk": "4.x",
     "commander": "7.x",
     "uuid": "^9.0.0"
   }
