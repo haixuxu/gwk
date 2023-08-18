@@ -1,3 +1,8 @@
+## 0.0.2
+
+- fix: gwk show help message without args bug
+- fix: client console exception bug
+
 ## 0.0.1
 
 - support tcp/web tunnel
