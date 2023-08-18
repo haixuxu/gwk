@@ -1,3 +1,7 @@
+## 0.0.3
+
+- fix: string-width esm module cause exec error
+
 ## 0.0.2
 
 - fix: gwk show help message without args bug
