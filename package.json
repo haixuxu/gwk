@@ -40,6 +40,7 @@
   "dependencies": {
     "chalk": "4.x",
     "commander": "7.x",
+    "string-width": "^6.1.0",
     "uuid": "^9.0.0"
   }
 }

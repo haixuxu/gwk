@@ -56,6 +56,7 @@ function startClient() {
                 console.log(`Starting gwk client with config: ${configPath}`);
                 clientOpts = readFile(configPath, true);
             } else {
+                console.log(`Starting gwk client.`);
                 const subdomain = cmd.subdomain || genSubdomain();
                 const tunnelItem: TunnelOpts = { protocol: 'web', subdomain, localPort: cmd.port || 8080, name: 'unnamed' };
                 clientOpts.tunnels = { [tunnelItem.name as string]: tunnelItem };

@@ -126,14 +126,13 @@ class Client {
     showConsole() {
         const keys = Object.keys(this.tunnelsMap);
         let message = 'tunnel list:\n';
-        let linesCount = keys.length + 1;
         keys.forEach((key: string) => {
             const tunnelConf = this.tunnelsMap[key];
             message += tunnelConf.name?.padEnd(16) + '';
             message += tunnelConf.status + '\n';
         });
         // console.log('tunnel===\n'+message);
-        printer.printStatus(message, linesCount);
+        printer.printStatus(message);
     }
 
     bootstrap() {
