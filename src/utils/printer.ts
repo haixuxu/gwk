@@ -1,3 +1,5 @@
+
+// @ts-ignore
 import stringWidth from 'string-width';
 
 let isFirstStatusPrinted = false;
