@@ -3,7 +3,6 @@
 Gwk is a tool that helps you expose your local servers or services to the
 internet, even in a private network. It supports both TCP and subdomain modes.
 
-
 # install
 
 ```bash
@@ -29,31 +28,30 @@ client.json
 {
   "tunnelHost": "gank007.com", // 服务器地址
   "tunnelAddr": 4443, // 服务器端口
-  "tunnels": [
-    {
+  "tunnels": {
+    "tcp001": {
       "protocol": "tcp",
       "localPort": 5000,
       "remotePort": 7200
     },
-    {
+    "tcp002": {
       "protocol": "tcp",
       "localPort": 5000,
-      "remotePort": 9000
+      "remotePort": 7500
     },
-    {
+    "webapp02": {
       "protocol": "web",
       "localPort": 4900,
       "subdomain": "app02"
     },
-    {
+    "webappmob": {
       "protocol": "web",
       "localPort": 9000,
       "subdomain": "mob"
     }
-  ]
+  }
 }
 ```
-
 
 # setup a gwk server
 
@@ -76,4 +74,3 @@ server.json
   "tlsKey": "./cert/my.key.pem"
 }
 ```
-
