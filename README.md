@@ -60,7 +60,7 @@ client.json
 ```bash
 gwkd  -c server.json
 # start with pm2
-pm2 start gwkd --name gwkapp -- server -c server.json
+pm2 start gwkd --name gwkapp --  -c server.json
 ```
 
 server.json
