@@ -62,7 +62,7 @@ class Client {
                 }
                 const tunnel = connObj.tunnel;
 
-                const successMsg = `tunnel ${chalk.green("ok")}: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`
+                const successMsg = `tunnel ${chalk.green('ok')}: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`;
                 connObj.tunnelConf.status = successMsg;
                 // this.logger.info(`tunnel setup ok: ${frame.message} => tcp://127.0.0.1:${tunnel.opts.localPort}`);
                 tunnel.on('stream', (stream: any) => {
@@ -70,8 +70,11 @@ class Client {
                     const localPort = tunnel.opts.localPort;
                     const localsocket = new net.Socket();
                     connObj.tunnelConf.status = `${successMsg} ${chalk.green('->')}`;
+                    let aborted = false;
                     // this.logger.info('connect 127.0.0.1:' + localPort);
                     localsocket.connect(localPort, '127.0.0.1', () => {
+                        if (aborted) return;
+                        clearTimeout(timeoutid);
                         // this.logger.info('connect ok:', localPort);
                         connObj.tunnelConf.status = `${successMsg} ${chalk.green('<->')}`;
                         stream.pipe(localsocket);
@@ -82,8 +85,14 @@ class Client {
                         connObj.tunnelConf.status = successMsg;
                         stream.destroy();
                     });
-                    localsocket.on('error', () => stream.destroy());
+                    localsocket.on('error', (err) => stream.destroy(err));
                     stream.on('close', () => localsocket.destroy());
+
+                    var timeoutid = setTimeout(() => {
+                        aborted = true;
+                        console.log('timeout====');
+                        localsocket.emit('error', Error('socket connect timeout!'));
+                    }, 15 * 1000);
                 });
             }
             return;

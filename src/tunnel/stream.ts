@@ -5,6 +5,7 @@ class GankStream extends Duplex {
         super();
         this.writerFn = writerFn;
         this.cache = Buffer.from([]);
+        this.isReady =false;
     }
 
     produce(rawData?:Buffer) {
