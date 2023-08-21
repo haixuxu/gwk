@@ -30,7 +30,8 @@ export class Tunnel extends EventEmitter {
             const binaryData = encode(frame);
             tcpsocketSend(this.socket, binaryData);
         } catch (error) {
-            console.log('send frame to socket err:', error);
+            // ignore
+            // console.log('send frame to socket err:', error);
         }
     }
     resetStream(streamId: string, message: string) {

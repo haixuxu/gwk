@@ -15,7 +15,7 @@ class GankStream extends Duplex {
 
     produce(rawData?: Buffer) {
         if (!rawData) {
-            console.log('no rawData====', rawData);
+            // console.log('no rawData====', rawData);
             return;
         }
         this.cache = Buffer.concat([this.cache, rawData]);

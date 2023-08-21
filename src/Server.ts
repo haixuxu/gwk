@@ -166,7 +166,7 @@ class Server {
             let host = req.host;
             host = host.replace(/:\d+$/, '');
             // this.logger.info('webTunnels:', Object.keys(this.webTunnels));
-            console.log(Object.keys(self.webTunnels));
+            // console.log(Object.keys(self.webTunnels));
             const connobj = self.webTunnels[host];
             if (!connobj) {
                 throw Error('service host missing');
