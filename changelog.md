@@ -1,3 +1,8 @@
+## 0.0.4
+
+- fix: web tunnel  missing http request body
+- perf: protocol/tunnel/client/server code
+
 ## 0.0.3
 
 - fix: string-width esm module cause exec error
