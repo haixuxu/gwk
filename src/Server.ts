@@ -48,7 +48,7 @@ class Server {
     }
 
     handleAuth(fm: any) {
-        console.log('handleAuth:', fm.token);
+        // console.log('handleAuth:', fm.token);
         return Promise.resolve('do success!!!');
     }
 

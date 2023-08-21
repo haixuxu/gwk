@@ -4,7 +4,6 @@ import { Tunnel } from './tunnel';
 import getCustomLogger, { Logger } from './utils/logger';
 import chalk from 'chalk';
 import printer from './utils/printer';
-// import { stringifyExclude } from './utils/replacer';
 
 class Client {
     serverHost: string;
