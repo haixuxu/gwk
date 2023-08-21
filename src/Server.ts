@@ -1,21 +1,19 @@
 import net from 'net';
 import tls from 'tls';
-import { GankServerOpts } from './types/index';
-import { AUTH_REQ, AUTH_RES, AuthFrame, PING_FRAME, PONG_FRAME, PingFrame, TUNNEL_REQ, TUNNEL_RES, TunnelReqFrame, TunnelResFrame, decode } from './protocol';
-import { bindStreamSocket, tcpsocketSend } from './utils/socket';
-import { getRamdomUUID } from './utils/uuid';
+import { ConnectObj, GankServerOpts } from './types/index';
 import { Tunnel } from './tunnel';
-import { buildHeader } from './utils/header';
 import getCustomLogger, { Logger } from './utils/logger';
 import { HeaderTransform, HttpReq } from './transform';
+import { getRamdomUUID } from './utils/uuid';
 class Server {
     private listenPort: number;
     private connections: any;
     listenHttpPort: number | undefined;
     listenHttpsPort: number | undefined;
     tlsOpts: { ca: string | undefined; key: string | undefined; cert: string | undefined };
-    webTunnels: Record<string, Tunnel>;
+    webTunnels: Record<string, ConnectObj>;
     serverHost: string;
+    connectMap:Record<string,ConnectObj>;
     logger: Logger;
     constructor(opts: GankServerOpts) {
         this.listenPort = opts.tunnelAddr || 4443;
@@ -29,144 +27,128 @@ class Server {
             cert: opts.tlsCrt,
         };
         this.webTunnels = {};
+        this.connectMap = {};
         this.logger = getCustomLogger('s>', 'debug');
-    }
-
-    setupTunnel(conn: any, frame: TunnelReqFrame): Promise<Tunnel> {
-        const self = this;
-        return new Promise((resolve, reject) => {
-            if (frame.protocol === 0x1) {
-                const opts = { localPort: frame.port, protocol: frame.protocol, remotePort: frame.port, name: frame.name };
-                const tunnelObj = new Tunnel(conn.socket, opts as any);
-                const server = net.createServer((socket2) => {
-                    this.logger.info('handle socket on ', frame.port + '');
-                    tunnelObj
-                        .createStream()
-                        .then((stream: any) => {
-                            this.logger.info('create stream for', tunnelObj.name);
-
-                            socket2.pipe(stream);
-                            stream.pipe(socket2);
-
-                            socket2.on('close', () => stream.destroy());
-                            socket2.on('error', () => stream.destroy());
-                            stream.on('close', () => socket2.destroy());
-                        })
-                        .catch((err: Error) => {
-                            this.logger.info('err:', err.message);
-                            socket2.write('service invalid!');
-                        });
-                });
-                server.listen(frame.port, () => {
-                    this.logger.info('tunnel listen on :' + frame.port);
-                    tunnelObj.server = server;
-                    tunnelObj.url = 'tcp://' + this.serverHost + ':' + frame.port;
-                    conn.tunnel = tunnelObj;
-
-                    resolve(tunnelObj);
-                });
-                server.on('error', function (err) {
-                    reject(err);
-                });
-            } else {
-                const opts: any = { localPort: frame.port, protocol: frame.protocol, name: frame.name };
-                if (!frame.subdomain) {
-                    const err = Error('subdomain missing');
-                    this.logger.error(err.message);
-                    reject(err);
-                    return;
-                }
-                const subdomainfull = frame.subdomain + '.' + this.serverHost;
-                opts.fulldomain = subdomainfull;
-                const tunnelObj = new Tunnel(conn.socket, opts as any);
-
-                if (self.webTunnels[subdomainfull]) {
-                    const err = Error('subdomain existed!');
-                    this.logger.error(err.message);
-                    reject(err);
-                    return;
-                }
-                tunnelObj.url = `http://${subdomainfull}/`;
-                conn.tunnel = tunnelObj;
-
-                self.webTunnels[subdomainfull] = tunnelObj;
-                resolve(tunnelObj);
-            }
-        });
     }
 
     handleError(conn: any, err: Error) {
         this.logger.info('err:', err.message);
     }
 
-    handleData(conn: any, data: Buffer) {
-        try {
-            const frame = decode(data);
-            // this.logger.info('frame:', frame);
-            if (frame.type === AUTH_REQ) {
-                const fm = new AuthFrame(AUTH_RES, frame.token, 1);
-                tcpsocketSend(conn.socket, fm.encode());
-                this.connections[conn.cid] = conn;
-            } else if (frame.type === PONG_FRAME) {
-                // this.logger.info('rtt:', Date.now() - parseInt(frame.stime));
-            } else if (frame.type === TUNNEL_REQ) {
-                this.setupTunnel(conn, frame)
-                    .then((tunnel) => {
-                        // create tunnel for tcp ok
-                        const tunresframe = new TunnelResFrame(TUNNEL_RES, 0x1, tunnel.url);
-                        tcpsocketSend(conn.socket, tunresframe.encode());
-                    })
-                    .catch((err) => {
-                        this.logger.error('error:', err.message);
-                        // response tunnel error
-                        const tunresframe = new TunnelResFrame(TUNNEL_RES, 0x2, err.message);
-                        tcpsocketSend(conn.socket, tunresframe.encode());
-                    });
-            } else if (frame.type >= 0xf0) {
-                conn.tunnel!.dispatchFrame(frame);
-            }
-        } catch (error) {
-            this.logger.info('error:', error);
+    releaseConn(conn: ConnectObj) {
+        if (conn.server) {
+            this.logger.info(`release tunnel unlisten on :${conn.remotePort}`);
+            conn.server.close();
         }
-    }
-
-    handleClose(conn: any) {
-        this.releaseConn(conn);
-        delete this.connections[conn.connectionId];
-    }
-
-    releaseConn(conn: any) {
-        const tunnel = conn.tunnel;
-        if (!tunnel) return;
-        if (tunnel.server) {
-            this.logger.info(`release tunnel unlisten on :${tunnel.opts.remotePort}`);
-            tunnel.server.close();
-        }
-        const fulldomain = tunnel.opts.fulldomain;
+        const fulldomain = conn.fulldomain;
         if (fulldomain) {
             delete this.webTunnels[fulldomain];
-            this.logger.info(`release tunnel unbind   on :${tunnel.opts.fulldomain}`);
+            this.logger.info(`release tunnel unbind   on :${conn.fulldomain}`);
+        }
+    }
+
+    handleAuth(fm: any) {
+        console.log('handleAuth:', fm.token);
+        return Promise.resolve('do success!!!');
+    }
+
+    transformSocket(connobj: ConnectObj, socket2: net.Socket, type: string) {
+        this.logger.info(`handle socket for tunnel:${connobj.url}`);
+        connobj.tunnel
+            .createStream()
+            .then((stream: any) => {
+                this.logger.info('create stream for', connobj.name);
+                socket2.pipe(stream);
+                stream.pipe(socket2);
+                socket2.on('close', () => stream.destroy());
+                socket2.on('error', () => stream.destroy());
+                stream.on('close', () => socket2.destroy());
+            })
+            .catch((err: Error) => {
+                this.logger.info('err:', err.message);
+                socket2.write('service invalid!');
+            });
+    }
+
+    handleTcpTunnel(connobj: ConnectObj, fm: any) {
+        return new Promise((resolve, reject) => {
+            const server = net.createServer((socket2) => {
+                this.transformSocket(connobj, socket2, 'tcp');
+            });
+            server.listen(fm.port, () => {
+                this.logger.info('tunnel listen on :' + fm.port);
+                connobj.server = server;
+                connobj.url = 'tcp://' + this.serverHost + ':' + fm.port;
+                connobj.server = server;
+                connobj.name = fm.name;
+                connobj.remotePort = fm.port;
+                resolve(connobj.url);
+            });
+            server.on('error', function(err) {
+                reject(err);
+            });
+        });
+    }
+
+    handleWebTunnel(connobj: ConnectObj, fm: any) {
+        return new Promise((resolve, reject) => {
+            if (!fm.subdomain) {
+                const err = Error('subdomain missing');
+                this.logger.error(err.message);
+                reject(err);
+                return;
+            }
+            const subdomainfull = fm.subdomain + '.' + this.serverHost;
+
+            if (this.webTunnels[subdomainfull]) {
+                const err = Error('subdomain existed!');
+                this.logger.error(err.message);
+                reject(err);
+                return;
+            }
+            connobj.url = `http://${subdomainfull}/`;
+            connobj.name = fm.name;
+            connobj.fulldomain = subdomainfull;
+            this.webTunnels[subdomainfull] = connobj;
+            resolve(connobj.url);
+        });
+    }
+
+    handleTunReq(connectObj: ConnectObj, fm: any) {
+        if (fm.protocol === 0x1) {
+            connectObj.type = 'tcp';
+            return this.handleTcpTunnel(connectObj, fm);
+        } else {
+            connectObj.type = 'web';
+            return this.handleWebTunnel(connectObj, fm);
         }
     }
 
     handleConection(socket: net.Socket) {
-        // handleAuth
-        // registerTunnel
-        // response tunnel OK
-        const self = this;
+        const tunnel = new Tunnel(socket);
+        const connectObj:ConnectObj = { tunnel, socket, url: '',rtt:0 };
         const cid = getRamdomUUID();
-        const conn: any = { cid, socket };
-        bindStreamSocket(socket, self.handleData.bind(self, conn), self.handleError.bind(self, conn), self.handleClose.bind(self, conn));
+        this.connectMap[cid]=connectObj;
+        tunnel.registerHandler('auth', this.handleAuth.bind(this));
+        tunnel.registerHandler('tunnel', this.handleTunReq.bind(this, connectObj));
+        socket.on('close',()=>{
+            delete this.connectMap[cid];
+            this.releaseConn(connectObj);
+        });
+        tunnel.on('pong',function({stime,atime}){
+            connectObj.rtt = Date.now()-stime;
+            // console.log('===rtt:',connectObj.rtt);
+            // console.log('====>',stime,atime);
+        })
     }
 
     keepOnline() {
         setTimeout(() => {
             const delList: string[] = [];
-            Object.keys(this.connections).forEach((key) => {
-                const conn = this.connections[key];
-                const pingFrame = new PingFrame(PING_FRAME, Date.now() + '');
+            Object.keys(this.connectMap).forEach((key:string) => {
                 try {
-                    tcpsocketSend(conn.socket, pingFrame.encode());
+                    const connobj = this.connectMap[key];
+                    connobj.tunnel.ping();
                 } catch (err) {
                     delList.push(key);
                 }
@@ -185,26 +167,23 @@ class Server {
             host = host.replace(/:\d+$/, '');
             // this.logger.info('webTunnels:', Object.keys(this.webTunnels));
             console.log(Object.keys(self.webTunnels));
-            const tunnel = self.webTunnels[host];
-            if (!tunnel) {
-                console.log('=====1111')
+            const connobj = self.webTunnels[host];
+            if (!connobj) {
                 throw Error('service host missing');
             }
+            const tunnel = connobj.tunnel;
             tunnel
                 .createStream()
                 .then((stream: any) => {
                     // this.logger.info('create stream for host:', host);
-                    self.logger.info('create stream on tunnel:', tunnel.name);
+                    self.logger.info('create stream on tunnel:', connobj.name);
                     pipestream.pipe(stream);
                     stream.pipe(socket);
-                    // req.on('close', () => {
-                    //     this.logger.info('req close=====', host);
-                    // });
                     stream.on('close', () => {
                         self.logger.info('stream close====', host);
                         socket.destroy();
                     });
-                    socket.on('error', function (err) {
+                    socket.on('error', function(err) {
                         stream.destroy(err);
                     });
                 })
@@ -221,7 +200,7 @@ class Server {
         const headerTransformer = new HeaderTransform(handlerReq);
         const pipestream = socket.pipe(headerTransformer);
 
-        headerTransformer.on('error', function (err: Error) {
+        headerTransformer.on('error', function(err: Error) {
             // console.log('===err:',err);
             socket.write(`HTTP/1.1 200 OK\r\n\r\n${err.message}!`);
             socket.destroy();
@@ -230,7 +209,7 @@ class Server {
 
     bootstrap() {
         const server = net.createServer(this.handleConection.bind(this));
-        // this.keepOnline();
+        this.keepOnline();
         server.listen(this.listenPort, () => {
             this.logger.info('server listen on 127.0.0.1:' + this.listenPort);
         });

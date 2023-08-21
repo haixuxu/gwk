@@ -1,3 +1,5 @@
+import { Tunnel } from "../tunnel";
+
 export interface TunnelOpts {
     name?:string;
     protocol: string; // tcp/web
@@ -27,4 +29,17 @@ export interface GankServerOpts {
     tlsCrt?: string;
     tlsKey?: string;
     tunnelAddr?: number;
+}
+
+
+export interface ConnectObj {
+    tunnel:Tunnel;
+    socket: any;
+    rtt: number;
+    url:string;
+    type?:string;
+    name?:string;
+    fulldomain?:string;
+    remotePort?:number;
+    server?:any;
 }
