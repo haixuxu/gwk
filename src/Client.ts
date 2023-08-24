@@ -22,8 +22,7 @@ class Client {
         const successMsg = (tunnel as any).successMsg;
         // this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
         const localPort = tunnelConf.localPort;
-        tunnelConf.status = `${successMsg} ${chalk.green('->')}`;
-
+        this.updateConsole(tunnelConf, `${successMsg} ${chalk.green('->')}`);
         const localsocket = new net.Socket();
         let aborted = false;
         // this.logger.info('connect 127.0.0.1:' + localPort);
@@ -31,13 +30,13 @@ class Client {
             if (aborted) return;
             clearTimeout(timeoutid);
             // this.logger.info('connect ok:', localPort);
-            tunnelConf.status = `${successMsg} ${chalk.green('<->')}`;
+            this.updateConsole(tunnelConf, `${successMsg} ${chalk.green('<->')}`);
             stream.pipe(localsocket);
             localsocket.pipe(stream);
             tunnel.setReady(stream);
         });
         localsocket.on('close', () => {
-            tunnelConf.status = successMsg;
+            this.updateConsole(tunnelConf, successMsg);
             stream.destroy();
         });
         localsocket.on('error', (err) => stream.destroy(err));
@@ -45,7 +44,7 @@ class Client {
 
         var timeoutid = setTimeout(() => {
             aborted = true;
-            tunnelConf.status = `${successMsg} ${chalk.yellow('timeout to'+localPort)}`;
+            this.updateConsole(tunnelConf, `${successMsg} ${chalk.yellow('->')}`);
             localsocket.emit('error', Error('socket connect timeout!'));
         }, 15 * 1000);
     }
@@ -53,33 +52,38 @@ class Client {
         const targetSocket = new net.Socket();
         // this.logger.info('creating tunnel:', name);
         // this.logger.info(`connecting ${this.serverHost}:${this.serverPort}`);
-        tunnelConf.status = 'connecting';
+        this.updateConsole(tunnelConf, 'connecting');
         targetSocket.connect(this.serverPort, this.serverHost, () => {
             // this.logger.info('connect okok');
-            tunnelConf.status = 'connect ok, starting auth';
+            this.updateConsole(tunnelConf, 'connect ok, starting auth');
             const tunnel = new Tunnel(targetSocket, tunnelConf);
             tunnel.on('stream', this.handleStream.bind(this, tunnel));
             tunnel.on('authed', (message: string) => {
-                tunnelConf.status = 'auth ==>' + message;
+                this.updateConsole(tunnelConf, 'auth ==>' + message);
             });
             tunnel.on('prepared', (message: string) => {
-                const successMsg = `tunnel ${chalk.green('ok')}: ${message} => tcp://127.0.0.1:${tunnelConf.localPort}`;
-                tunnelConf.status = successMsg;
+                const successMsg = `${chalk.green('ok')}: ${message} => tcp://127.0.0.1:${tunnelConf.localPort}`;
+                this.updateConsole(tunnelConf, successMsg);
                 (tunnel as any).successMsg = successMsg;
             });
             tunnel.on('error', (err: Error) => {
-                tunnelConf.status = `tunnel ${chalk.red('err')}:${err.message}`;
+                this.updateConsole(tunnelConf, `tunnel ${chalk.red('err')}:${err.message}`);
             });
-            tunnel.startAuth("test:test124")
+            tunnel.startAuth('test:test124');
         });
         targetSocket.on('error', (err: Error) => {
-            tunnelConf.status = 'err:' + err.message;
+            this.updateConsole(tunnelConf, err.message);
             // this.logger.error('connect err:', err.message, ' retrying');
         });
         targetSocket.on('close', () => {
             // this.logger.error('server is closed.');
             setTimeout(() => this.setupTunnel(tunnelConf), 3000);
         });
+    }
+
+    updateConsole(tunopts: TunnelOpts, statusText: string) {
+        tunopts.status = statusText;
+        this.showConsole();
     }
 
     showConsole() {
@@ -95,28 +99,7 @@ class Client {
     }
 
     bootstrap() {
-        const self = this;
-        Object.entries(this.tunnelsMap || {}).forEach(function(values: any) {
-            values[1].name = values[0];
-            values[1].status = ' starting tunnel ' + values[0];
-        });
-
-        Object.keys(this.tunnelsMap).forEach((key: string) => {
-            const tunnelConf = this.tunnelsMap[key];
-            const proxyConf = new Proxy(tunnelConf, {
-                get: function(target: any, prop) {
-                    return target[prop];
-                },
-                set: function(target: any, prop, value: any) {
-                    target[prop] = value;
-                    if (prop === 'status') {
-                        self.showConsole();
-                    }
-                    return true;
-                },
-            });
-            return this.setupTunnel(proxyConf);
-        });
+        Object.values(this.tunnelsMap).forEach((temp: TunnelOpts) => this.setupTunnel(temp));
     }
 }
 
