@@ -1,3 +1,7 @@
+## 0.0.5
+
+- fix: web tunnel show message when error
+
 ## 0.0.4
 
 - fix: web tunnel  missing http request body
