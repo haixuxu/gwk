@@ -44,7 +44,10 @@ export class Tunnel extends EventEmitter {
     }
     emitStreamEvent(stream: GankStream) {
         stream.on('close', ()=>this.closeStream(stream.id));
-        stream.on('error', (err: Error) => this.resetStream(stream.id, err.message));
+        stream.on('error', (err: Error) => {
+            console.log(err)
+            this.resetStream(stream.id, err.message);
+        });
         stream.isReady = true;
         this.emit('stream', stream);
     }
@@ -170,7 +173,9 @@ export class Tunnel extends EventEmitter {
                 delete this.streams[streamId];
                 if (!stream.isReady) {
                     const defer = this.defers[streamId];
-                    defer.reject('reset stream');
+                    const msg = frame.data?.toString();
+                    // console.log('msg:',msg);
+                    defer.reject(msg);
                 }
             }
         }

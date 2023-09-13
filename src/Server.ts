@@ -189,7 +189,14 @@ class Server {
                 })
                 .catch((err: string) => {
                     self.logger.info('err:', err);
-                    socket.write(`HTTP/1.1 200 OK\r\n\r\n${err}!`);
+                    let msg = err;
+                    if(/ECONNREFUSED/.test(msg)){
+                        socket.write(`HTTP/1.1 502 Bad Gateway\r\n\r\n502 Bad Gateway, message:${msg}!`);
+                    }else if(/ETIMEDOUT/.test(msg)){
+                        socket.write(`HTTP/1.1 504 Gateway Timeout\r\n\r\n504 Gateway Timeout, message:${msg}!`);
+                    }else{
+                        socket.write(`HTTP/1.1 200 OK\r\n\r\n${msg}, please service is on!`); 
+                    }
                     socket.destroy();
                 });
 

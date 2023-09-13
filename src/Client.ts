@@ -45,7 +45,7 @@ class Client {
         var timeoutid = setTimeout(() => {
             aborted = true;
             this.updateConsole(tunnelConf, `${successMsg} ${chalk.yellow('->')}`);
-            localsocket.emit('error', Error('socket connect timeout!'));
+            localsocket.emit('error', Error('socket ETIMEDOUT!'));
         }, 15 * 1000);
     }
     setupTunnel(tunnelConf: TunnelOpts) {
