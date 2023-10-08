@@ -1,3 +1,6 @@
+## 0.0.6
+
+- perf: change args name
 ## 0.0.5
 
 - fix: web tunnel show message when error
