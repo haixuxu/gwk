@@ -11,8 +11,8 @@ class Client {
     tunnelsMap: Record<string, TunnelOpts>;
     logger: Logger;
     constructor(opts: GankClientOpts) {
-        this.serverHost = opts.tunnelHost;
-        this.serverPort = opts.tunnelAddr || 4443;
+        this.serverHost = opts.serverHost;
+        this.serverPort = opts.serverPort || 4443;
         this.tunnelsMap = opts.tunnels || {};
         this.logger = getCustomLogger('c>', 'debug');
     }

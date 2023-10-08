@@ -45,7 +45,7 @@ export class Tunnel extends EventEmitter {
     emitStreamEvent(stream: GankStream) {
         stream.on('close', ()=>this.closeStream(stream.id));
         stream.on('error', (err: Error) => {
-            console.log(err)
+            // console.log(err)
             this.resetStream(stream.id, err.message);
         });
         stream.isReady = true;
@@ -97,7 +97,7 @@ export class Tunnel extends EventEmitter {
         this.streams={};
     }
     handleError(err: Error) {
-        console.log('===err:', err);
+        // console.log('===err:', err);
     }
     dataListener(data: Buffer) {
         try {

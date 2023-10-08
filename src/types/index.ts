@@ -12,8 +12,8 @@ export interface TunnelOpts {
 
 export interface GankClientOpts {
     authtoken: string; // for client auth
-    tunnelAddr?: number; // for tcp connect remote server
-    tunnelHost: string; // for tcp connect remote server
+    serverPort?: number; // for tcp connect remote server
+    serverHost: string; // for tcp connect remote server
     logLevel: string;
     logFile: string;
     tunnels: Record<string,TunnelOpts>;
@@ -28,7 +28,7 @@ export interface GankServerOpts {
     tlsCA?: string;
     tlsCrt?: string;
     tlsKey?: string;
-    tunnelAddr?: number;
+    serverPort?: number;
 }
 
 

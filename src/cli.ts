@@ -62,9 +62,9 @@ function startClient() {
                 clientOpts.tunnels = { [tunnelItem.name as string]: tunnelItem };
             }
 
-            if (!clientOpts.tunnelHost) {
-                clientOpts.tunnelHost = 'gank.75cos.com';
-                clientOpts.tunnelAddr = 4443;
+            if (!clientOpts.serverHost) {
+                clientOpts.serverHost = 'gank.75cos.com';
+                clientOpts.serverPort = 4443;
             }
             Object.keys(clientOpts.tunnels).forEach(key=>{
                 clientOpts.tunnels[key].name = key;

@@ -1,6 +1,6 @@
 {
-    "tunnelHost":"127.0.0.1",
-    "tunnelAddr":4443,
+    "serverHost":"127.0.0.1",
+    "serverPort":4443,
     "tunnels":{
         "tcp001":{
             "protocol":"tcp",

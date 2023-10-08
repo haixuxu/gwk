@@ -26,8 +26,8 @@ client.json
 
 ```json
 {
-  "tunnelHost": "gank007.com", // 服务器地址
-  "tunnelAddr": 4443, // 服务器端口
+  "serverHost": "gank007.com", // 服务器地址
+  "serverPort": 4443, // 服务器端口
   "tunnels": {
     "tcp001": {
       "protocol": "tcp",
@@ -66,7 +66,7 @@ server.json
 ```json
 {
   "serverHost": "gwk007.com", // 使用web 隧道时, 需要域名
-  "tunnelAddr": 4443, // 隧道监听端口
+  "serverPort": 4443, // 隧道监听端口
   "httpAddr": 80, // 启动http服务
   "httpsAddr": 443, // 启动https服务, 需要后面的证书配置
   "tlsCA": "./rootCA/rootCA.crt", // 使用自签名证书用到

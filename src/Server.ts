@@ -16,7 +16,7 @@ class Server {
     connectMap:Record<string,ConnectObj>;
     logger: Logger;
     constructor(opts: GankServerOpts) {
-        this.listenPort = opts.tunnelAddr || 4443;
+        this.listenPort = opts.serverPort || 4443;
         this.listenHttpPort = opts.httpAddr;
         this.listenHttpsPort = opts.httpsAddr;
         this.serverHost = opts.serverHost || 'gank007.com';
