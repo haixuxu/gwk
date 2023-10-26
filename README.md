@@ -95,3 +95,16 @@ generate cert
 ```bash
 node createRootByCA.js
 ```
+
+start server
+
+```bash
+export GWK_SERVER=true
+npx tsx src/cli.ts -c etc/server.ts
+```
+
+start client
+
+```bash
+npx tsx src/cli.ts -c etc/client.ts
+```
