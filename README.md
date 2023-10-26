@@ -9,11 +9,18 @@ internet, even in a private network. It supports both TCP and subdomain modes.
 npm install -g gwk
 ```
 
-# client
+# usage
+
+serverHost default is `gank.75cos.com`
 
 ```bash
 # example 1 , detault dispatch to 127.0.0.1:8080
 gwk
+```
+
+# client more  example
+
+```bash
 # example 2
 gwk  --port 8080
 # example 3
@@ -73,4 +80,18 @@ server.json
   "tlsCrt": "./cert/my.crt",
   "tlsKey": "./cert/my.key.pem"
 }
+```
+
+
+#  develop
+
+generate CA 
+
+```bash
+node createRootCA.js
+```
+generate cert
+
+```bash
+node createRootByCA.js
 ```

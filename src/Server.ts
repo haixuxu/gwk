@@ -115,6 +115,7 @@ class Server {
     }
 
     handleTunReq(connectObj: ConnectObj, fm: any) {
+        this.logger.info("tunnel req:"+JSON.stringify(fm));
         if (fm.protocol === 0x1) {
             connectObj.type = 'tcp';
             return this.handleTcpTunnel(connectObj, fm);

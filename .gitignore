@@ -133,3 +133,5 @@ dist
 lib
 temp
 etc/certs
+rootCA
+cert
