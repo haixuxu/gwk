@@ -124,7 +124,7 @@ class Server {
         }
     }
 
-    handleConection(socket: net.Socket) {
+    handleConnection(socket: net.Socket) {
         const tunnel = new Tunnel(socket);
         const connectObj:ConnectObj = { tunnel, socket, url: '',rtt:0 };
         const cid = getRamdomUUID();
@@ -215,7 +215,7 @@ class Server {
     }
 
     bootstrap() {
-        const server = net.createServer(this.handleConection.bind(this));
+        const server = net.createServer(this.handleConnection.bind(this));
         this.keepOnline();
         server.listen(this.listenPort, () => {
             this.logger.info('server listen on 127.0.0.1:' + this.listenPort);
