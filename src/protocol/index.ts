@@ -18,8 +18,6 @@ export const STREAM_DATA = 0xf2;
 export const STREAM_FIN = 0xf3;
 export const STREAM_RST = 0xf4;
 
-
-
 /**
  * // required: type, token
  * @param {*} AUTH_REQ frame
@@ -81,13 +79,17 @@ export function encode(frame: Frame): Buffer {
     } else if (type === PONG_FRAME) {
         return Buffer.concat([prefix, timestampToBytes(frame.stime as number), timestampToBytes(frame.atime as number)]);
     } else if (type === TUNNEL_REQ) {
-        const probuf = Buffer.from([frame.protocol as number]);
+        const probuf = Buffer.from([frame.tunType as number]);
         let message = '';
-        if (frame.protocol === 0x2) {
+        if (frame.tunType === 0x2) {
             message = `${frame.name}:${frame.subdomain}`;
-        } else { // 0x1:tcp, 0x3:udp
+        } else if (frame.tunType === 0x1 || frame.tunType === 0x3) {
+            // 0x1:tcp, 0x3:udp
             message = `${frame.name}:${frame.port}`;
+        } else if (frame.tunType === 0x4) {
+            message = `${frame.name}:${frame.secretKey}`;
         }
+        console.log('message;',message);
         return Buffer.concat([prefix, probuf, Buffer.from(message)]);
     } else if (type === TUNNEL_RES) {
         const statusBuf = Buffer.from([frame.status as number]);
@@ -125,12 +127,15 @@ export function decode(data: Buffer): Frame {
         let parts = message.split(':');
         let port = 0;
         let subdomain = '';
-        if (proto === 0x1||proto===0x3) {
+        let secretKey = '';
+        if (proto === 0x1 || proto === 0x3) {
             port = Number(parts[1]);
-        } else {
+        } else if (proto === 0x2) {
             subdomain = parts[1];
+        } else if (proto === 0x4) {
+            secretKey = parts[1];
         }
-        return { type, protocol: proto, name: parts[0], port, subdomain };
+        return { type, tunType: proto, name: parts[0], port, subdomain, secretKey };
     } else if (type === TUNNEL_RES) {
         const status = data[1];
         const message = data.slice(2).toString();

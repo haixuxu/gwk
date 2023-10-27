@@ -39,8 +39,8 @@ class Client {
                 }
             });
         };
-        const listenError = (err: Error) =>{
-            console.log('stream err:',err);
+        const listenError = (err: Error) => {
+            console.log('stream err:', err);
         };
 
         bindStreamSocket(stream, listenData, listenError, () => {
@@ -82,13 +82,29 @@ class Client {
     }
 
     handleStream(tunnel: Tunnel, stream: any) {
-        if (tunnel.opts?.protocol === 'udp') {
+        if (tunnel.opts?.tunType === 0x3) {
             this.handleUdpStream(tunnel, stream);
         } else {
+            console.log('handle tcp stream===')
             this.handleTcpStream(tunnel, stream);
         }
     }
-    setupTunnel(tunnelConf: TunnelOpts) {
+    setupStcpLocalPeer(tunnelConf: TunnelOpts, handler: (socket: net.Socket) => void) {
+        console.log('setupStcpLocalPeer:===',tunnelConf.bindPort);
+        return new Promise((resolve, reject) => {
+            const server = net.createServer(handler);
+            const hostname: string = tunnelConf.bindIp as string;
+            server.listen(tunnelConf.bindPort, hostname, () => {
+                this.logger.info(`stcp local listen on ${tunnelConf.bindIp}:${tunnelConf.bindPort}`);
+                resolve('ok');
+            });
+            server.on('error', function(err) {
+                reject(err);
+            });
+        });
+    }
+
+    async setupTunnel(tunnelConf: TunnelOpts) {
         const targetSocket = new net.Socket();
         // this.logger.info('creating tunnel:', name);
         // this.logger.info(`connecting ${this.serverHost}:${this.serverPort}`);
@@ -97,12 +113,28 @@ class Client {
             // this.logger.info('connect okok');
             this.updateConsole(tunnelConf, 'connect ok, starting auth');
             const tunnel = new Tunnel(targetSocket, tunnelConf);
-            tunnel.on('stream', this.handleStream.bind(this, tunnel));
+            if (tunnelConf.tunType === 0x4 && tunnelConf.bindIp && tunnelConf.bindPort) {
+                tunnel.on('prepared', () => {
+                    // dispatch local stream to stcp peer stream
+                    this.setupStcpLocalPeer(tunnelConf, (socket) => {
+                        console.log('socket====>');
+                        tunnel.createStream().then((stream) => {
+                            console.log('stream ready====')
+                            socket.pipe(stream);
+                            stream.pipe(socket);
+                        });
+                    }).then((res) => {
+                        console.log('res:', res);
+                    });
+                });
+            } else {
+                tunnel.on('stream', this.handleStream.bind(this, tunnel));
+            }
             tunnel.on('authed', (message: string) => {
                 this.updateConsole(tunnelConf, 'auth ==>' + message);
             });
             tunnel.on('prepared', (message: string) => {
-                const proto = tunnelConf.protocol === "udp" ? 'udp' : 'tcp';
+                const proto = tunnelConf.tunType === 0x3 ? 'udp' : 'tcp';
                 const successMsg = `${chalk.green('ok')}: ${message} => ${proto}://127.0.0.1:${tunnelConf.localPort}`;
                 this.updateConsole(tunnelConf, successMsg);
                 (tunnel as any).successMsg = successMsg;

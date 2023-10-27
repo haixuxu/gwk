@@ -1,0 +1,12 @@
+{
+    "serverHost": "127.0.0.1",
+    "serverPort": 4443,
+    "tunnels": {
+        "stcp01": {
+            "protocol": "stcp",
+            "localIp":"127.0.0.1",
+            "localPort": 4000,
+            "secretKey": "kk12k321l3213"
+        }
+    }
+}

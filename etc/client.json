@@ -1,26 +1,43 @@
 {
-    "serverHost":"127.0.0.1",
-    "serverPort":4443,
-    "tunnels":{
-        "tcp001":{
-            "protocol":"tcp",
-            "localPort":5000,
-            "remotePort":7200
+    "serverHost": "127.0.0.1",
+    "serverPort": 4443,
+    "tunnels": {
+        "stcp01": {
+            "protocol": "stcp",
+            "localIp":"127.0.0.1",
+            "localPort": 22,
+            "secretKey": "kk12k321l3213"
         },
-        "tcp002":{
-            "protocol":"tcp",
-            "localPort":5000,
-            "remotePort":7500
+        "stcp02": {
+            "protocol": "stcp",
+            "bindPort": 2222,
+            "bindIp": "127.0.0.1",
+            "secretKey": "kk12k321l3213"
         },
-        "webapp02":{
-            "protocol":"web",
-            "localPort":4900,
-            "subdomain":"app02"
+        "udp001": {
+            "protocol": "udp",
+            "localPort": 5555,
+            "remotePort": 6666
         },
-        "webappmob":{
-            "protocol":"web",
-            "localPort":9000,
-            "subdomain":"mob"
+        "tcp001": {
+            "protocol": "tcp",
+            "localPort": 5000,
+            "remotePort": 7200
+        },
+        "tcp002": {
+            "protocol": "tcp",
+            "localPort": 5000,
+            "remotePort": 7500
+        },
+        "webapp02": {
+            "protocol": "web",
+            "localPort": 4900,
+            "subdomain": "app02"
+        },
+        "webappmob": {
+            "protocol": "web",
+            "localPort": 9000,
+            "subdomain": "mob"
         }
     }
 }

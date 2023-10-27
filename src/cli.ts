@@ -58,7 +58,7 @@ function startClient() {
             } else {
                 console.log(`Starting gwk client.`);
                 const subdomain = cmd.subdomain || genSubdomain();
-                const tunnelItem: TunnelOpts = { protocol: 'web', subdomain, localPort: cmd.port || 8080, name: 'unnamed',status:"init" };
+                const tunnelItem: TunnelOpts = { protocol: 'web', tunType: 0x2, subdomain, localPort: cmd.port || 8080, name: 'unnamed', status: 'init' };
                 clientOpts.tunnels = { [tunnelItem.name as string]: tunnelItem };
             }
 
@@ -66,8 +66,11 @@ function startClient() {
                 clientOpts.serverHost = 'gank.75cos.com';
                 clientOpts.serverPort = 4443;
             }
-            Object.keys(clientOpts.tunnels).forEach(key=>{
-                clientOpts.tunnels[key].name = key;
+            Object.keys(clientOpts.tunnels).forEach((key) => {
+                const temp = clientOpts.tunnels[key];
+                temp.name = key;
+                const protocol = temp.protocol;
+                temp.tunType = protocol === 'tcp' ? 0x1 : protocol === 'web' ? 0x2 : protocol === 'udp' ? 0x3 : 0x4;
             });
             const client = new Client(clientOpts);
             client.bootstrap();

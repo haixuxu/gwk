@@ -1,12 +1,13 @@
 import net from 'net';
 import tls from 'tls';
 import dgram from 'dgram';
-import { ConnectObj, GankServerOpts } from './types/index';
+import { ConnectObj, GankServerOpts, tuntype2Str } from './types/index';
 import { Tunnel } from './tunnel';
 import getCustomLogger, { Logger } from './utils/logger';
 import { HeaderTransform, HttpReq } from './stream/header';
 import { getRamdomUUID } from './utils/uuid';
 import { bindStreamSocket, tcpsocketSend } from './utils/socket';
+import GankStream from './stream/gank';
 class Server {
     private listenPort: number;
     private connections: any;
@@ -14,6 +15,7 @@ class Server {
     listenHttpsPort: number | undefined;
     tlsOpts: { ca: string | undefined; key: string | undefined; cert: string | undefined };
     webTunnels: Record<string, ConnectObj>;
+    stcpTunnels: Record<string, ConnectObj>;
     serverHost: string;
     connectMap: Record<string, ConnectObj>;
     logger: Logger;
@@ -29,6 +31,7 @@ class Server {
             cert: opts.tlsCrt,
         };
         this.webTunnels = {};
+        this.stcpTunnels = {};
         this.connectMap = {};
         this.logger = getCustomLogger('s>', 'debug');
     }
@@ -46,6 +49,10 @@ class Server {
         if (fulldomain) {
             delete this.webTunnels[fulldomain];
             this.logger.info(`release tunnel unbind   on :${conn.fulldomain}`);
+        }
+        if(conn.secretKey){
+            delete this.stcpTunnels[conn.secretKey];
+            this.logger.info(`release tunnel unbind   on :${conn.secretKey}`);
         }
     }
 
@@ -79,6 +86,14 @@ class Server {
             tcpsocketSend(stream, msg); // udp msg = >stream;
         } else {
             this.logger.info(`handle client[udp:${clientHostPort}] socket for tunnel:${connobj.url}`);
+            const listenStreamData = (data: Buffer) => {
+                // send to client
+                udpsocket.send(data, rinfo.port, rinfo.address, (err) => {
+                    if (err) {
+                        console.log('err;', err);
+                    }
+                });
+            };
             connobj.tunnel
                 .createStream()
                 .then((stream: any) => {
@@ -87,14 +102,7 @@ class Server {
                     tcpsocketSend(stream, msg); // udp msg = >stream;
                     bindStreamSocket(
                         stream,
-                        (data: Buffer) => {
-                            // send to client
-                            udpsocket.send(data, rinfo.port, rinfo.address, (err) => {
-                                if (err) {
-                                    console.log('err;', err);
-                                }
-                            });
-                        },
+                        listenStreamData,
                         (err) => {
                             console.log('stream err:', err, rinfo);
                         },
@@ -175,16 +183,66 @@ class Server {
         });
     }
 
+    handleStcpTunnel(connobj: ConnectObj, fm: any) {
+        return new Promise((resolve, reject) => {
+            if (!fm.secretKey) {
+                const err = Error('secretKey missing');
+                this.logger.error(err.message);
+                reject(err);
+                return;
+            }
+            const secretKey = fm.secretKey;
+            if (this.stcpTunnels[secretKey]) {
+                const err = Error('secretKey existed!');
+                this.logger.error(err.message);
+                reject(err);
+                return;
+            }
+            connobj.url = `${secretKey}`;
+            connobj.name = fm.name;
+            connobj.secretKey=secretKey
+            this.stcpTunnels[secretKey] = connobj;
+            if(/stcp_right/.test(secretKey)){
+                const leftkey = secretKey.replace(/stcp_right/,'stcp_left');
+                connobj.tunnel.on("stream",(rightStream:GankStream)=>{
+                    const peerConnObj = this.stcpTunnels[leftkey];
+                  
+                    if(!peerConnObj){
+                        rightStream.destroy();
+                        return;
+                    }
+                    peerConnObj.tunnel
+                    .createStream()
+                    .then((stream: any) => {
+                        this.logger.info(`create stream for ${connobj.name} to ${peerConnObj.name} ${secretKey}=>${leftkey}`);
+                        connobj.tunnel.setReady(rightStream);
+                        rightStream.pipe(stream);
+                        stream.pipe(rightStream);
+                        rightStream.on('close', () => stream.destroy());
+                        rightStream.on('error', () => stream.destroy());
+                        stream.on('close', () => rightStream.destroy());
+                    })
+                    .catch((err: Error) => {
+                        this.logger.info('err:', err.message);
+                        rightStream.write('service invalid!');
+                    });
+                });
+            }
+            resolve(connobj.url);
+        });
+    }
+
     handleTunReq(connectObj: ConnectObj, fm: any) {
         this.logger.info('tunnel req:' + JSON.stringify(fm));
-        if (fm.protocol === 0x1) {
-            connectObj.type = 'tcp';
+        connectObj.type = tuntype2Str[fm.tunType];
+        if (fm.tunType === 0x1) {
             return this.handleTcpTunnel(connectObj, fm);
-        } else if (fm.protocol === 0x2) {
-            connectObj.type = 'web';
+        } else if (fm.tunType === 0x2) {
             return this.handleWebTunnel(connectObj, fm);
-        } else if (fm.protocol === 0x3) {
+        } else if (fm.tunType === 0x3) {
             return this.handleUdpTunnel(connectObj, fm);
+        } else if (fm.tunType === 0x4) {
+            return this.handleStcpTunnel(connectObj, fm);
         }
     }
 

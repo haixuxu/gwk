@@ -1,13 +1,19 @@
-import { Tunnel } from "../tunnel";
+import { Tunnel } from '../tunnel';
+
+export const tuntype2Str = ['', 'tcp', 'web', 'udp', 'stcp'];
 
 export interface TunnelOpts {
-    name?:string;
+    name?: string;
+    tunType: number;
     protocol: string; // tcp/web
     localPort: number;
     subdomain?: string; // http only
     remotePort?: number;
-    fulldomain?:string;
-    status?:string;
+    fulldomain?: string;
+    status?: string;
+    secretKey?: string;
+    bindIp?: string;
+    bindPort?: number;
 }
 
 export interface GankClientOpts {
@@ -16,7 +22,7 @@ export interface GankClientOpts {
     serverHost: string; // for tcp connect remote server
     logLevel: string;
     logFile: string;
-    tunnels: Record<string,TunnelOpts>;
+    tunnels: Record<string, TunnelOpts>;
 }
 
 export interface GankServerOpts {
@@ -31,15 +37,15 @@ export interface GankServerOpts {
     serverPort?: number;
 }
 
-
 export interface ConnectObj {
-    tunnel:Tunnel;
+    tunnel: Tunnel;
     socket: any;
     rtt: number;
-    url:string;
-    type?:string;
-    name?:string;
-    fulldomain?:string;
-    remotePort?:number;
-    server?:any;
+    url: string;
+    type?: string;
+    name?: string;
+    fulldomain?: string;
+    remotePort?: number;
+    server?: any;
+    secretKey?:string;
 }

@@ -189,10 +189,15 @@ export class Tunnel extends EventEmitter {
     }
 
     prepareTunnel(tunopts: TunnelOpts) {
-        const pno = tunopts.protocol === 'tcp' ? 0x1 : tunopts.protocol === 'udp' ? 0x3 : 0x2;
-        let port = pno === 0x2 ? 0 : tunopts.remotePort;
-        let subdomain = pno === 0x2 ? tunopts.subdomain : '';
-        const tunnelreqFrame = { type: TUNNEL_REQ, protocol: pno, name: tunopts.name, port, subdomain };
+        let port = tunopts.tunType === 0x2 ? 0 : tunopts.remotePort;
+        let subdomain = tunopts.tunType === 0x2 ? tunopts.subdomain : '';
+        let secretKey = tunopts.secretKey;
+        if (tunopts.bindIp && tunopts.bindPort) {
+            secretKey = 'stcp_right_' + secretKey;
+        } else {
+            secretKey = 'stcp_left_' + secretKey;
+        }
+        const tunnelreqFrame = { type: TUNNEL_REQ, tunType: tunopts.tunType, name: tunopts.name, port, subdomain, secretKey };
         this.sendFrame(tunnelreqFrame);
     }
 
