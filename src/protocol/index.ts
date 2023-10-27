@@ -83,10 +83,10 @@ export function encode(frame: Frame): Buffer {
     } else if (type === TUNNEL_REQ) {
         const probuf = Buffer.from([frame.protocol as number]);
         let message = '';
-        if (frame.protocol === 0x1) {
-            message = `${frame.name}:${frame.port}`;
-        } else {
+        if (frame.protocol === 0x2) {
             message = `${frame.name}:${frame.subdomain}`;
+        } else { // 0x1:tcp, 0x3:udp
+            message = `${frame.name}:${frame.port}`;
         }
         return Buffer.concat([prefix, probuf, Buffer.from(message)]);
     } else if (type === TUNNEL_RES) {
@@ -125,7 +125,7 @@ export function decode(data: Buffer): Frame {
         let parts = message.split(':');
         let port = 0;
         let subdomain = '';
-        if (proto === 0x1) {
+        if (proto === 0x1||proto===0x3) {
             port = Number(parts[1]);
         } else {
             subdomain = parts[1];

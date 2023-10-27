@@ -1,9 +1,12 @@
 import net from 'net';
+import dgram from 'dgram';
 import { GankClientOpts, TunnelOpts } from './types/index';
 import { Tunnel } from './tunnel';
 import getCustomLogger, { Logger } from './utils/logger';
 import chalk from 'chalk';
 import printer from './utils/printer';
+import { bindStreamSocket } from './utils/socket';
+import { UdpOverTcpReadStream } from './stream/udp2tcp';
 
 class Client {
     serverHost: string;
@@ -16,8 +19,37 @@ class Client {
         this.tunnelsMap = opts.tunnels || {};
         this.logger = getCustomLogger('c>', 'debug');
     }
+    handleUdpStream(tunnel: Tunnel, stream: any) {
+        const tunnelConf = tunnel.opts as TunnelOpts;
+        const successMsg = (tunnel as any).successMsg;
+        // this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
+        const localPort = tunnelConf.localPort;
+        this.updateConsole(tunnelConf, `${successMsg} ${chalk.green('->')}`);
+        const client = dgram.createSocket('udp4');
+        client.bind(); // bind random udp port
+        const rst = new UdpOverTcpReadStream(client);
+        rst.pipe(stream);
 
-    handleStream(tunnel: Tunnel, stream: any) {
+        const listenData = (buff: Buffer) => {
+            client.send(buff, localPort, '127.0.0.1', (err, bytes) => {
+                if (err) {
+                    stream.emit('error', Error(err.message));
+                } else {
+                    this.updateConsole(tunnelConf, `${successMsg} ${chalk.green('<->')}`);
+                }
+            });
+        };
+        const listenError = (err: Error) =>{
+            console.log('stream err:',err);
+        };
+
+        bindStreamSocket(stream, listenData, listenError, () => {
+            stream.emit('error', Error('closed'));
+            client.close();
+        });
+        tunnel.setReady(stream);
+    }
+    handleTcpStream(tunnel: Tunnel, stream: any) {
         const tunnelConf = tunnel.opts as TunnelOpts;
         const successMsg = (tunnel as any).successMsg;
         // this.logger.info('new stream==== for tunnel:', tunnel.id, JSON.stringify(tunnel.opts));
@@ -48,6 +80,14 @@ class Client {
             localsocket.emit('error', Error('socket ETIMEDOUT!'));
         }, 15 * 1000);
     }
+
+    handleStream(tunnel: Tunnel, stream: any) {
+        if (tunnel.opts?.protocol === 'udp') {
+            this.handleUdpStream(tunnel, stream);
+        } else {
+            this.handleTcpStream(tunnel, stream);
+        }
+    }
     setupTunnel(tunnelConf: TunnelOpts) {
         const targetSocket = new net.Socket();
         // this.logger.info('creating tunnel:', name);
@@ -62,7 +102,8 @@ class Client {
                 this.updateConsole(tunnelConf, 'auth ==>' + message);
             });
             tunnel.on('prepared', (message: string) => {
-                const successMsg = `${chalk.green('ok')}: ${message} => tcp://127.0.0.1:${tunnelConf.localPort}`;
+                const proto = tunnelConf.protocol === "udp" ? 'udp' : 'tcp';
+                const successMsg = `${chalk.green('ok')}: ${message} => ${proto}://127.0.0.1:${tunnelConf.localPort}`;
                 this.updateConsole(tunnelConf, successMsg);
                 (tunnel as any).successMsg = successMsg;
             });
