@@ -16,7 +16,8 @@
         },
         "udp001": {
             "protocol": "udp",
-            "localPort": 5555,
+            "localIp":"1.2.4.8",
+            "localPort": 53,
             "remotePort": 6666
         },
         "tcp001": {

@@ -135,3 +135,4 @@ temp
 etc/certs
 rootCA
 cert
+.vscode

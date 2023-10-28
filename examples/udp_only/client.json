@@ -1,0 +1,12 @@
+{
+    "serverHost":"127.0.0.1",
+    "serverPort":4443,
+    "tunnels":{
+        "udp001": {
+            "protocol": "udp",
+            "localIp":"1.2.4.8",
+            "localPort": 53,
+            "remotePort": 6666
+        }
+    }
+}

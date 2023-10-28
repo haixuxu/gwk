@@ -108,3 +108,9 @@ start client
 ```bash
 npx tsx src/cli.ts -c etc/client.ts
 ```
+
+# test dns with custom port
+
+```bash
+dig @127.0.0.1 -p 6666 bbs.75cos.com
+```

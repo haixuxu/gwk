@@ -7,7 +7,7 @@ var server = dgram.createSocket('udp4', function(data, rinfo) {
     clients.push(rinfo);
     // console.log(clients);
     //sending msg
-    server.send('hello client'+Math.random().toString(36), rinfo.port, rinfo.address, function(error) {
+    server.send('>>'+Date.now(), rinfo.port, rinfo.address, function(error) {
         if (error) {
             client.close();
         } else {

@@ -89,7 +89,6 @@ export function encode(frame: Frame): Buffer {
         } else if (frame.tunType === 0x4) {
             message = `${frame.name}:${frame.secretKey}`;
         }
-        console.log('message;',message);
         return Buffer.concat([prefix, probuf, Buffer.from(message)]);
     } else if (type === TUNNEL_RES) {
         const statusBuf = Buffer.from([frame.status as number]);

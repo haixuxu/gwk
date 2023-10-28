@@ -1,0 +1,12 @@
+{
+    "serverHost": "127.0.0.1",
+    "serverPort": 4443,
+    "tunnels": {
+        "stcp02": {
+            "protocol": "stcp",
+            "bindPort": 4800,
+            "bindIp": "127.0.0.1",
+            "secretKey": "test_portmap"
+        }
+    }
+}

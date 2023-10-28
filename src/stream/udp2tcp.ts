@@ -6,11 +6,12 @@ import dgram, { RemoteInfo } from 'dgram';
  */
 class UdpOverTcpReadStream extends Readable {
     cache: Buffer;
-    constructor(udpsocket: dgram.Socket) {
+    constructor(udpsocket: dgram.Socket, sourceaddrbuf: Buffer) {
         super();
         this.cache = Buffer.from([]);
         const self = this;
-        udpsocket.on('message', function(msg: Buffer, rinfo: RemoteInfo) {
+        udpsocket.on('message', function (msg: Buffer, rinfo: RemoteInfo) {
+            msg = Buffer.concat([sourceaddrbuf, msg]);
             const datalen = msg.length;
             //  udp packet max length :2^16 - 1 - 8 - 20 = 65507
             const newbuf = Buffer.concat([Buffer.from([datalen >> 8, datalen % 256]), msg]);

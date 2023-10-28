@@ -2,10 +2,16 @@ import { Tunnel } from '../tunnel';
 
 export const tuntype2Str = ['', 'tcp', 'web', 'udp', 'stcp'];
 
+
+export interface IpAddr{
+    addr:string;
+    port:number;
+}
 export interface TunnelOpts {
     name?: string;
     tunType: number;
     protocol: string; // tcp/web
+    localIp: string;
     localPort: number;
     subdomain?: string; // http only
     remotePort?: number;
@@ -14,6 +20,7 @@ export interface TunnelOpts {
     secretKey?: string;
     bindIp?: string;
     bindPort?: number;
+    server?:any;
 }
 
 export interface GankClientOpts {
@@ -48,4 +55,6 @@ export interface ConnectObj {
     remotePort?: number;
     server?: any;
     secretKey?:string;
+    // for transport udp data over tcp
+    udpstream?:any;
 }

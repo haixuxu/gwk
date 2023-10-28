@@ -12,7 +12,6 @@ import { frameSegment } from '../protocol/segment';
 type Handler = (fm: Frame) => Promise<any>;
 export class Tunnel extends EventEmitter {
     socket: net.Socket;
-    lo_udpsocket?: dgram.Socket;
     defers: any;
     streams: Record<string, GankStream>;
     handlers: Record<string, Handler>;

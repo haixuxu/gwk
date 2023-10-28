@@ -8,6 +8,7 @@ import { HeaderTransform, HttpReq } from './stream/header';
 import { getRamdomUUID } from './utils/uuid';
 import { bindStreamSocket, tcpsocketSend } from './utils/socket';
 import GankStream from './stream/gank';
+import { buildIpAddrBuffer, parseIpAddrBuffer } from './utils/ipaddr';
 class Server {
     private listenPort: number;
     private connections: any;
@@ -50,7 +51,7 @@ class Server {
             delete this.webTunnels[fulldomain];
             this.logger.info(`release tunnel unbind   on :${conn.fulldomain}`);
         }
-        if(conn.secretKey){
+        if (conn.secretKey) {
             delete this.stcpTunnels[conn.secretKey];
             this.logger.info(`release tunnel unbind   on :${conn.secretKey}`);
         }
@@ -79,52 +80,42 @@ class Server {
             });
     }
 
-    transformUdpSocket(connobj: ConnectObj, msg: Buffer, rinfo: dgram.RemoteInfo, udpsocket: dgram.Socket, streams: Map<string, any>) {
+    async transformUdpSocket(connobj: ConnectObj, msg: Buffer, rinfo: dgram.RemoteInfo, udpsocket: dgram.Socket) {
         const clientHostPort = `${rinfo.address}:${rinfo.port}`;
-        if (streams.has(clientHostPort)) {
-            const stream = streams.get(clientHostPort);
-            tcpsocketSend(stream, msg); // udp msg = >stream;
-        } else {
-            this.logger.info(`handle client[udp:${clientHostPort}] socket for tunnel:${connobj.url}`);
+        // 只使用一个stream, 避免多次创建
+        if (!connobj.udpstream) {
+            this.logger.info('create stream for', connobj.name);
+            connobj.udpstream = await connobj.tunnel.createStream();
             const listenStreamData = (data: Buffer) => {
+                const udpaddrbuf = data.slice(0, 6);
+                const ipaddr = parseIpAddrBuffer(udpaddrbuf);
+                const rawdata = data.slice(6);
+                // console.log('send client===>',rawdata);
                 // send to client
-                udpsocket.send(data, rinfo.port, rinfo.address, (err) => {
+                udpsocket.send(rawdata, ipaddr.port, ipaddr.addr, (err) => {
                     if (err) {
                         console.log('err;', err);
                     }
                 });
             };
-            connobj.tunnel
-                .createStream()
-                .then((stream: any) => {
-                    this.logger.info('create stream for', connobj.name);
-                    streams.set(clientHostPort, stream);
-                    tcpsocketSend(stream, msg); // udp msg = >stream;
-                    bindStreamSocket(
-                        stream,
-                        listenStreamData,
-                        (err) => {
-                            console.log('stream err:', err, rinfo);
-                        },
-                        () => {
-                            console.log('strem close===for :', rinfo);
-                        },
-                    );
-                })
-                .catch((err: Error) => {
-                    this.logger.info('err:', err.message);
-                });
+            const logmsg: any = (err?: Error) => console.log(err || ' stream closed');
+            bindStreamSocket(connobj.udpstream, listenStreamData, logmsg, logmsg);
         }
+        this.logger.info(`handle client[udp:${clientHostPort}] packet for tunnel:${connobj.url} msglen:${msg.length}`);
+        const stream = connobj.udpstream;
+        const udpaddr = buildIpAddrBuffer(rinfo.address, rinfo.port);
+        const udppacket = Buffer.concat([udpaddr, msg]);
+      
+        tcpsocketSend(stream, udppacket); // udp msg = >stream;
     }
 
     handleUdpTunnel(connobj: ConnectObj, fm: any) {
         return new Promise((resolve, reject) => {
             const server = dgram.createSocket('udp4');
-            const streams = new Map();
             server.on('message', (msg: Buffer, rinfo: dgram.RemoteInfo) => {
-                this.transformUdpSocket(connobj, msg, rinfo, server, streams);
+                this.transformUdpSocket(connobj, msg, rinfo, server);
             });
-            server.on('error', function(err) {
+            server.on('error', function (err) {
                 reject(err);
             });
             server.bind(fm.port, () => {
@@ -153,7 +144,7 @@ class Server {
                 connobj.remotePort = fm.port;
                 resolve(connobj.url);
             });
-            server.on('error', function(err) {
+            server.on('error', function (err) {
                 reject(err);
             });
         });
@@ -200,18 +191,25 @@ class Server {
             }
             connobj.url = `${secretKey}`;
             connobj.name = fm.name;
-            connobj.secretKey=secretKey
+            connobj.secretKey = secretKey;
             this.stcpTunnels[secretKey] = connobj;
-            if(/stcp_right/.test(secretKey)){
-                const leftkey = secretKey.replace(/stcp_right/,'stcp_left');
-                connobj.tunnel.on("stream",(rightStream:GankStream)=>{
-                    const peerConnObj = this.stcpTunnels[leftkey];
-                  
-                    if(!peerConnObj){
-                        rightStream.destroy();
-                        return;
-                    }
-                    peerConnObj.tunnel
+            this.handleStcpDispatch(connobj, secretKey);
+            resolve(connobj.url);
+        });
+    }
+
+    handleStcpDispatch(connectObj: ConnectObj, secretKey: string) {
+        // dispatch right stcp peer to left stcp peer;
+        if (/stcp_right/.test(secretKey)) {
+            const connobj = connectObj;
+            const leftkey = secretKey.replace(/stcp_right/, 'stcp_left');
+            connobj.tunnel.on('stream', (rightStream: GankStream) => {
+                const peerConnObj = this.stcpTunnels[leftkey];
+                if (!peerConnObj) {
+                    rightStream.destroy();
+                    return;
+                }
+                peerConnObj.tunnel
                     .createStream()
                     .then((stream: any) => {
                         this.logger.info(`create stream for ${connobj.name} to ${peerConnObj.name} ${secretKey}=>${leftkey}`);
@@ -226,10 +224,8 @@ class Server {
                         this.logger.info('err:', err.message);
                         rightStream.write('service invalid!');
                     });
-                });
-            }
-            resolve(connobj.url);
-        });
+            });
+        }
     }
 
     handleTunReq(connectObj: ConnectObj, fm: any) {
@@ -257,7 +253,7 @@ class Server {
             delete this.connectMap[cid];
             this.releaseConn(connectObj);
         });
-        tunnel.on('pong', function({ stime, atime }) {
+        tunnel.on('pong', function ({ stime, atime }) {
             connectObj.rtt = Date.now() - stime;
             // console.log('===rtt:',connectObj.rtt);
             // console.log('====>',stime,atime);
@@ -305,7 +301,7 @@ class Server {
                         self.logger.info('stream close====', host);
                         socket.destroy();
                     });
-                    socket.on('error', function(err) {
+                    socket.on('error', function (err) {
                         stream.destroy(err);
                     });
                 })
@@ -329,7 +325,7 @@ class Server {
         const headerTransformer = new HeaderTransform(handlerReq);
         const pipestream = socket.pipe(headerTransformer);
 
-        headerTransformer.on('error', function(err: Error) {
+        headerTransformer.on('error', function (err: Error) {
             // console.log('===err:',err);
             socket.write(`HTTP/1.1 200 OK\r\n\r\n${err.message}!`);
             socket.destroy();
