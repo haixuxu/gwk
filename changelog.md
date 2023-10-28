@@ -1,6 +1,12 @@
+## 0.0.7
+
+- feat: support udp type
+- feat: support stcp type
+
 ## 0.0.6
 
 - perf: change args name
+
 ## 0.0.5
 
 - fix: web tunnel show message when error

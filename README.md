@@ -1,7 +1,15 @@
 # gwk
 
 Gwk is a tool that helps you expose your local servers or services to the
-internet, even in a private network. It supports both TCP and subdomain modes.
+internet, even in a private network. 
+
+
+# Feature
+
+- support tcp port expose
+- support subdomain expose http server
+- support udp port expose 
+- support stcp expose with two peer
 
 # install
 

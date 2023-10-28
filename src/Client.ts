@@ -52,11 +52,12 @@ class Client {
             });
         };
         const listenError = (err: Error) => {
-            console.log('stream err:', err);
+            this.updateConsole(tunnelConf, `${err.message} ${chalk.red('->|<-')}`);
         };
 
         bindStreamSocket(stream, listenData, listenError, () => {
-            stream.emit('error', Error('closed'));
+            // stream.emit('error', Error('closed'));
+            this.updateConsole(tunnelConf, `stream closed ${chalk.red('->|<-')}`);
         });
         tunnel.setReady(stream);
     }
@@ -111,7 +112,7 @@ class Client {
         });
         const hostname: string = tunnelConf.bindIp as string;
         server.listen(tunnelConf.bindPort, hostname, () => {
-            this.logger.info(`stcp local listen on ${tunnelConf.bindIp}:${tunnelConf.bindPort}`);
+            // this.logger.info(`stcp local listen on ${tunnelConf.bindIp}:${tunnelConf.bindPort}`);
         });
         server.on('error', (err) => {
             this.logger.error(err);
@@ -140,7 +141,8 @@ class Client {
             tunnel.on('prepared', (message: string) => {
                 const proto = tunnelConf.tunType === 0x3 ? 'udp' : 'tcp';
                 const localPort = tunnelConf.localPort || tunnelConf.bindPort;
-                const successMsg = `${chalk.green('ok')}: ${message} <=> ${proto}://${tunnelConf.localIp}:${localPort}`;
+                const showIp = tunnelConf.bindPort? tunnelConf.bindIp:tunnelConf.localIp;
+                const successMsg = `${chalk.green('ok')}: ${message} <=> ${proto}://${showIp}:${localPort} ${tunnelConf.bindPort?'LISTEN':''}`;
                 this.updateConsole(tunnelConf, successMsg);
                 (tunnel as any).successMsg = successMsg;
             });
