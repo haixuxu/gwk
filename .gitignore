@@ -132,7 +132,6 @@ dist
 
 lib
 temp
-etc/certs
+certs
 rootCA
-cert
 .vscode

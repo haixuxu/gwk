@@ -3,7 +3,7 @@
     "serverPort": 4443,
     "httpAddr": 80,
     "httpsAddr": 443,
-    "tlsCA":"./etc/certs/rootCA.crt",
-    "tlsCrt":"./etc/certs/gank007.com/my.crt",
-    "tlsKey":"./etc/certs/gank007.com/my.key.pem"
+    "tlsCA":"./certs/rootCA.crt",
+    "tlsCrt":"./certs/gank007.com/my.crt",
+    "tlsKey":"./certs/gank007.com/my.key.pem"
 }

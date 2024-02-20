@@ -41,8 +41,8 @@ client.json
 
 ```json
 {
-  "serverHost": "gank007.com", // 服务器地址
-  "serverPort": 4443, // 服务器端口
+  "serverHost": "gank007.com",
+  "serverPort": 4443,
   "tunnels": {
     "tcp001": {
       "protocol": "tcp",
@@ -80,11 +80,11 @@ server.json
 
 ```json
 {
-  "serverHost": "gwk007.com", // 使用web 隧道时, 需要域名
-  "serverPort": 4443, // 隧道监听端口
-  "httpAddr": 80, // 启动http服务
-  "httpsAddr": 443, // 启动https服务, 需要后面的证书配置
-  "tlsCA": "./rootCA/rootCA.crt", // 使用自签名证书用到
+  "serverHost": "gwk007.com",
+  "serverPort": 4443,
+  "httpAddr": 80,
+  "httpsAddr": 443,
+  "tlsCA": "./rootCA/rootCA.crt",
   "tlsCrt": "./cert/my.crt",
   "tlsKey": "./cert/my.key.pem"
 }
@@ -96,25 +96,25 @@ server.json
 generate CA 
 
 ```bash
-node createRootCA.js
+node scripts/createRootCA.js
 ```
 generate cert
 
 ```bash
-node createRootByCA.js
+node scripts/createRootByCA.js
 ```
 
 start server
 
 ```bash
 export GWK_SERVER=true
-npx tsx src/cli.ts -c etc/server.ts
+npx tsx src/cli.ts -c etc/server.json
 ```
 
 start client
 
 ```bash
-npx tsx src/cli.ts -c etc/client.ts
+npx tsx src/cli.ts -c etc/client.json
 ```
 
 # test dns with custom port

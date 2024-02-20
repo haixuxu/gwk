@@ -4,8 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const mkdirp = require('mkdirp');
 
-var caCertPem = fs.readFileSync(path.join(__dirname, './rootCA/rootCA.crt'));
-var caKeyPem = fs.readFileSync(path.join(__dirname, './rootCA/rootCA.key.pem'));
+const projectRoot = path.resolve(__dirname,'../');
+
+var caCertPem = fs.readFileSync(path.join(projectRoot, './certs/rootCA.crt'));
+var caKeyPem = fs.readFileSync(path.join(projectRoot, './certs/rootCA.key.pem'));
 var caCert = forge.pki.certificateFromPem(caCertPem);
 var caKey = forge.pki.privateKeyFromPem(caKeyPem);
 
@@ -101,11 +103,12 @@ cert.sign(caKey, forge.md.sha256.create());
 var certPem = pki.certificateToPem(cert);
 var keyPem = pki.privateKeyToPem(keys.privateKey);
 
-mkdirp.sync(path.join(__dirname, './cert'));
-const certPath = path.join(__dirname, './cert/my.crt');
-const keyPath = path.join(__dirname, './cert/my.key.pem');
-fs.writeFileSync(path.join(__dirname, './cert/my.crt'), certPem);
-fs.writeFileSync(path.join(__dirname, './cert/my.key.pem'), keyPem);
+const domainCertDir = path.join(projectRoot, './certs/gank007.com');
+mkdirp.sync(domainCertDir);
+const certPath = path.join(domainCertDir, './my.crt');
+const keyPath = path.join(domainCertDir, './my.key.pem');
+fs.writeFileSync(path.join(domainCertDir, './my.crt'), certPem);
+fs.writeFileSync(path.join(domainCertDir, './my.key.pem'), keyPem);
 
 
 console.log('公钥内容：\n');

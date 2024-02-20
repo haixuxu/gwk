@@ -9,6 +9,7 @@ const pki = forge.pki;
 const fs = require('fs');
 const path = require('path');
 const mkdirp = require('mkdirp');
+const projectRoot = path.resolve(__dirname,'../');
 
 var keys = pki.rsa.generateKeyPair(1024);
 var cert = pki.createCertificate();
@@ -56,8 +57,8 @@ cert.sign(keys.privateKey, forge.md.sha256.create());
 
 var certPem = pki.certificateToPem(cert);
 var keyPem = pki.privateKeyToPem(keys.privateKey);
-var certPath = path.join(__dirname, './rootCA/rootCA.crt');
-var keyPath = path.join(__dirname, './rootCA/rootCA.key.pem');
+var certPath = path.join(projectRoot, './certs/rootCA.crt');
+var keyPath = path.join(projectRoot, './certs/rootCA.key.pem');
 
 console.log('公钥内容：\n');
 console.log(certPem);
@@ -66,6 +67,6 @@ console.log(keyPem);
 console.log(`公钥存放路径：\n ${certPath}\n`);
 console.log(`私钥存放路径：\n ${keyPath}\n`);
 
-mkdirp.sync(path.join(__dirname, './rootCA'));
+mkdirp.sync(path.join(projectRoot, './certs'));
 fs.writeFileSync(certPath, certPem);
 fs.writeFileSync(keyPath, keyPem);
