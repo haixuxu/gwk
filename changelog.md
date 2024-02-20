@@ -1,3 +1,7 @@
+## 0.0.8
+
+- feat: add github actions
+
 ## 0.0.7
 
 - feat: support udp type
