@@ -3,6 +3,9 @@
 Gwk is a tool that helps you expose your local servers or services to the
 internet, even in a private network. 
 
+# wiki
+
+[Wiki](https://github.com/xuxihai123/gwk/wiki)
 
 # Feature
 
