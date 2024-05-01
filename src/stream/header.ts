@@ -34,7 +34,7 @@ function parseRequest(chunk: Buffer): HttpReq {
         url,
         version,
         headers,
-        host:headers['host'],
+        host: headers['host'],
     };
 }
 
@@ -69,20 +69,20 @@ export class HeaderTransform extends Transform {
         try {
             this.cache = Buffer.concat([this.cache, chunk]);
             const headerEndIndex = this.cache.indexOf('\r\n\r\n');
-            if (headerEndIndex !== -1) {
-                this.isHeaderCompleted = true;
-                const headerChunk = chunk.slice(0, headerEndIndex + 4);
-                const overflowChunk = chunk.slice(headerEndIndex + 4);
-
-                const req = parseRequest(headerChunk);
-                const req2 = this.transformFn(req);
-                const header2Chunk = buildRequest(req2);
-                const allbuf = Buffer.concat([header2Chunk, overflowChunk]);
-                this.push(allbuf); // 推送报文头部+overflow数据
+            if (headerEndIndex === -1) {
                 callback();
-            } else {
-                callback();
+                return;
             }
+            this.isHeaderCompleted = true;
+            const headerChunk = chunk.slice(0, headerEndIndex + 4);
+            const overflowChunk = chunk.slice(headerEndIndex + 4);
+
+            const req = parseRequest(headerChunk);
+            const req2 = this.transformFn(req);
+            const header2Chunk = buildRequest(req2);
+            const allbuf = Buffer.concat([header2Chunk, overflowChunk]);
+            this.push(allbuf); // 推送报文头部+overflow数据
+            callback();
         } catch (error) {
             callback(error);
         }

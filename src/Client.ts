@@ -33,7 +33,7 @@ class Client {
             if (!udpclientMap.has(udpclientAddr)) {
                 const client = dgram.createSocket('udp4');
                 client.bind(); // bind random udp port
-                const obj = {udpsocket:client, lastAt:Date.now()};
+                const obj = { udpsocket: client, lastAt: Date.now() };
                 udpclientMap.set(udpclientAddr, obj);
                 const rst = new UdpOverTcpReadStream(client, udpaddrbuf);
                 rst.pipe(stream);
@@ -41,7 +41,7 @@ class Client {
             const udpcliObj = udpclientMap.get(udpclientAddr);
             udpcliObj.lastAt = Date.now();
             // console.log('from peer to local udp port:',buff.slice(6), '====localPort',localPort);
-            udpcliObj.udpsocket.send(buff.slice(6), localPort, tunnelConf.localIp, (err: any,len:number) => {
+            udpcliObj.udpsocket.send(buff.slice(6), localPort, tunnelConf.localIp, (err: any, len: number) => {
                 if (err) {
                     this.updateConsole(tunnelConf, `${successMsg} ${chalk.red('->|')}`);
                     // console.log('send err:',err);
@@ -54,11 +54,7 @@ class Client {
         const listenError = (err: Error) => {
             this.updateConsole(tunnelConf, `${err.message} ${chalk.red('->|<-')}`);
         };
-
-        bindStreamSocket(stream, listenData, listenError, () => {
-            // stream.emit('error', Error('closed'));
-            this.updateConsole(tunnelConf, `stream closed ${chalk.red('->|<-')}`);
-        });
+        bindStreamSocket(stream, listenData, listenError, () => listenError(Error('stream closed')));
         tunnel.setReady(stream);
     }
     handleTcpStream(tunnel: Tunnel, stream: any) {
@@ -125,31 +121,30 @@ class Client {
         // this.logger.info('creating tunnel:', name);
         // this.logger.info(`connecting ${this.serverHost}:${this.serverPort}`);
         this.updateConsole(tunnelConf, 'connecting');
-        targetSocket.connect(this.serverPort, this.serverHost, () => {
+        targetSocket.connect(this.serverPort, this.serverHost, async () => {
             // this.logger.info('connect okok');
             this.updateConsole(tunnelConf, 'connect ok, starting auth');
-            const tunnel = new Tunnel(targetSocket, tunnelConf);
+            const tunnel = new Tunnel(targetSocket);
+            tunnel.opts = tunnelConf;
+            const msg1 = await tunnel.startAuth('test:test124');
+            this.updateConsole(tunnelConf, 'auth ==>' + msg1);
+            const message = await tunnel.prepareTunnel(tunnelConf);
+            const proto = tunnelConf.tunType === 0x3 ? 'udp' : 'tcp';
+            const localPort = tunnelConf.localPort || tunnelConf.bindPort;
+            const showIp = tunnelConf.bindPort ? tunnelConf.bindIp : tunnelConf.localIp;
+            const successMsg = `${chalk.green('ok')}: ${message} <=> ${proto}://${showIp}:${localPort} ${tunnelConf.bindPort ? 'LISTEN' : ''}`;
+            this.updateConsole(tunnelConf, successMsg);
+            (tunnel as any).successMsg = successMsg;
+
             if (tunnelConf.tunType === 0x4 && tunnelConf.bindIp && tunnelConf.bindPort) {
                 // dispatch bindPort stream to stcp peer stream
-                tunnel.on('prepared', () => this.setupStcpBindPort(tunnel, tunnelConf));
+                this.setupStcpBindPort(tunnel, tunnelConf);
             } else {
                 tunnel.on('stream', this.handleStream.bind(this, tunnel));
             }
-            tunnel.on('authed', (message: string) => {
-                this.updateConsole(tunnelConf, 'auth ==>' + message);
-            });
-            tunnel.on('prepared', (message: string) => {
-                const proto = tunnelConf.tunType === 0x3 ? 'udp' : 'tcp';
-                const localPort = tunnelConf.localPort || tunnelConf.bindPort;
-                const showIp = tunnelConf.bindPort? tunnelConf.bindIp:tunnelConf.localIp;
-                const successMsg = `${chalk.green('ok')}: ${message} <=> ${proto}://${showIp}:${localPort} ${tunnelConf.bindPort?'LISTEN':''}`;
-                this.updateConsole(tunnelConf, successMsg);
-                (tunnel as any).successMsg = successMsg;
-            });
             tunnel.on('error', (err: Error) => {
                 this.updateConsole(tunnelConf, `tunnel ${chalk.red('err')}:${err.message}`);
             });
-            tunnel.startAuth('test:test124');
         });
         targetSocket.on('error', (err: Error) => {
             this.updateConsole(tunnelConf, err.message);

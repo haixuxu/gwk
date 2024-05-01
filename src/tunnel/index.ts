@@ -1,8 +1,7 @@
 import net from 'net';
-import dgram from 'dgram';
 import GankStream from '../stream/gank';
 import { getRamdomUUID } from '../utils/uuid';
-import { createDeferred } from '../utils/defered';
+import { deferred, Deferred } from '../utils/defered';
 import { STREAM_DATA, STREAM_EST, STREAM_FIN, STREAM_INIT, STREAM_RST, Frame, encode, AUTH_REQ, decode, AUTH_RES, TUNNEL_REQ, TUNNEL_RES, PING_FRAME, PONG_FRAME } from '../protocol';
 import { bindStreamSocket, tcpsocketSend } from '../utils/socket';
 import EventEmitter from 'events';
@@ -13,16 +12,19 @@ type Handler = (fm: Frame) => Promise<any>;
 export class Tunnel extends EventEmitter {
     socket: net.Socket;
     defers: any;
+    opts?:TunnelOpts;
     streams: Record<string, GankStream>;
     handlers: Record<string, Handler>;
-    opts: TunnelOpts | undefined;
-    constructor(socket: net.Socket, opts?: TunnelOpts) {
+    authDefer: Deferred<string>;
+    prepareDefer: Deferred<string>;
+    constructor(socket: net.Socket) {
         super();
         this.socket = socket;
         this.defers = {};
         this.streams = {};
         this.handlers = {};
-        this.opts = opts;
+        this.authDefer = deferred();
+        this.prepareDefer = deferred();
         bindStreamSocket(socket, this.dataListener.bind(this), this.handleError.bind(this), this.handleClose.bind(this));
     }
 
@@ -58,19 +60,18 @@ export class Tunnel extends EventEmitter {
         listFrames.forEach((temp) => this.sendFrame(temp));
     }
 
+    sendCtrlFrame(type: number, status: number, message: string) {
+        this.sendFrame({ type, status, message });
+    }
+
     handleAuth(frame: Frame) {
         const authHanler = this.handlers['auth'];
         if (!authHanler) {
-            this.sendFrame({ type: AUTH_RES, status: 1, message: 'ok' });
+            this.sendCtrlFrame(AUTH_RES, 0x1, 'ok');
             return;
         }
-        authHanler(frame)
-            .then((ret) => {
-                this.sendFrame({ type: AUTH_RES, status: 0x1, message: ret });
-            })
-            .catch((err) => {
-                this.sendFrame({ type: AUTH_RES, status: 0x2, message: err.message });
-            });
+        // prettier-ignore
+        authHanler(frame).then((ret) => this.sendCtrlFrame(AUTH_RES, 0x1, ret)).catch((err) => this.sendCtrlFrame(AUTH_RES, 0x2, err.message));
     }
 
     handleTunnelReq(frame: Frame) {
@@ -78,13 +79,8 @@ export class Tunnel extends EventEmitter {
         if (!tunnelHanler) {
             throw Error('missing tunnel handler');
         }
-        tunnelHanler(frame)
-            .then((ret) => {
-                this.sendFrame({ type: TUNNEL_RES, status: 0x1, message: ret });
-            })
-            .catch((err) => {
-                this.sendFrame({ type: TUNNEL_RES, status: 0x2, message: err.message });
-            });
+        // prettier-ignore
+        tunnelHanler(frame).then((ret) => this.sendCtrlFrame(TUNNEL_RES, 0x1, ret)).catch((err) => this.sendCtrlFrame(TUNNEL_RES, 0x2, err.message));
     }
 
     registerHandler(type: string, handler: any) {
@@ -92,9 +88,7 @@ export class Tunnel extends EventEmitter {
     }
 
     handleClose() {
-        Object.values(this.streams).forEach((temp) => {
-            temp.destroy();
-        });
+        Object.values(this.streams).forEach((temp) => temp.destroy());
         this.streams = {};
     }
     handleError(err: Error) {
@@ -104,18 +98,13 @@ export class Tunnel extends EventEmitter {
         try {
             const frame = decode(data);
             if (frame.type === AUTH_REQ) {
-                // TODO handle auth
                 this.handleAuth(frame);
             } else if (frame.type === AUTH_RES) {
-                this.emit('authed', frame.message || 'tunnel auth success');
-                if (this.opts) {
-                    this.prepareTunnel(this.opts);
-                }
+                this.authDefer.resolve(frame.message || 'tunnel auth success');
             } else if (frame.type === TUNNEL_REQ) {
-                // TODO handle req
                 this.handleTunnelReq(frame);
             } else if (frame.type === TUNNEL_RES) {
-                this.emit('prepared', frame.message || 'tunnel prepare success');
+                this.prepareDefer.resolve(frame.message || 'tunnel prepare success');
             } else if (frame.type === PING_FRAME) {
                 const pongFrame = { type: PONG_FRAME, stime: frame.stime, atime: Date.now() };
                 this.sendFrame(pongFrame);
@@ -134,7 +123,7 @@ export class Tunnel extends EventEmitter {
         const streamId = frame.streamId || '';
         if (frame.type === STREAM_INIT) {
             // client init stream
-            const stream = new GankStream(streamId, function(data: Buffer) {
+            const stream = new GankStream(streamId, function (data: Buffer) {
                 const dataFrame = { type: STREAM_DATA, streamId, data };
                 self.sendStreamFrame(dataFrame);
             });
@@ -185,6 +174,8 @@ export class Tunnel extends EventEmitter {
     startAuth(token: string) {
         let authReqFm = { type: AUTH_REQ, status: 0, token };
         this.sendFrame(authReqFm);
+        setTimeout(() => this.authDefer.reject(Error('timeout')), 5 * 1000);
+        return this.authDefer;
     }
 
     prepareTunnel(tunopts: TunnelOpts) {
@@ -198,17 +189,19 @@ export class Tunnel extends EventEmitter {
         }
         const tunnelreqFrame = { type: TUNNEL_REQ, tunType: tunopts.tunType, name: tunopts.name, port, subdomain, secretKey };
         this.sendFrame(tunnelreqFrame);
+        setTimeout(() => this.prepareDefer.reject(Error('timeout')), 5 * 1000);
+        return this.prepareDefer;
     }
 
     createStream(): Promise<any> {
         const self = this;
-        const defer: any = createDeferred();
+        const defer: Deferred<GankStream> = deferred();
         const streamId = getRamdomUUID();
         this.defers[streamId] = defer;
         try {
             const initFrame = { type: STREAM_INIT, streamId };
             this.sendFrame(initFrame);
-            const stream = new GankStream(streamId, function(data: Buffer) {
+            const stream = new GankStream(streamId, function (data: Buffer) {
                 const dataFrame = { type: STREAM_DATA, streamId, data };
                 self.sendFrame(dataFrame);
             });
@@ -217,7 +210,7 @@ export class Tunnel extends EventEmitter {
         } catch (error) {
             defer.reject(error);
         }
-        return defer.promise;
+        return defer;
     }
 
     setReady(stream: GankStream) {
